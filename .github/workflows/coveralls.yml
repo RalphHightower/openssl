@@ -47,7 +47,12 @@ jobs:
         ]
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - name: Harden Runner
+      uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         submodules: recursive
         ref: ${{ matrix.branches.branch }}
@@ -60,7 +65,7 @@ jobs:
         sudo apt-get -yq install lcov
         sudo apt-get -yq install bison gettext keyutils ldap-utils libldap2-dev libkeyutils-dev python3 python3-paste python3-pyrad slapd tcsh python3-virtualenv virtualenv python3-kdcproxy
     - name: install Test2::V0 for gost_engine testing
-      uses: perl-actions/install-with-cpanm@stable
+      uses: perl-actions/install-with-cpanm@a17c30475babbae5b450e29563d536fb22baa83b # stable
       with:
         install: Test2::V0
     - name: setup hostname workaround
@@ -86,7 +91,7 @@ jobs:
              --exclude "/usr/include/*"
               -o ./lcov.info
     - name: Coveralls upload
-      uses: coverallsapp/github-action@v2.3.2
+      uses: coverallsapp/github-action@43f11c4e058174f808ee9cd63701b6c42fe3f5e3 # v2.3.2
       with:
         github-token: ${{ secrets.github_token }}
         git-branch: ${{ matrix.branches.branch }}

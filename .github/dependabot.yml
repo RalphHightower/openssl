@@ -13,3 +13,8 @@ updates:
       - "approval: review pending"
     reviewers:
       - "openssl/committers"
+
+  - package-ecosystem: docker
+    directory: /test/quic-openssl-docker
+    schedule:
+      interval: daily

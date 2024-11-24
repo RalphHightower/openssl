@@ -1,4 +1,4 @@
-FROM martenseemann/quic-network-simulator-endpoint:latest
+FROM martenseemann/quic-network-simulator-endpoint:latest@sha256:42d79cc04b88f2e4b4c8beb418b0843c123f26852ff6bbba4caa6badc0043d23
 
 # Make sure curl picks up the new openssl
 ENV PKG_CONFIG_LIBDIR=/usr/lib64/pkgconfig:/usr/lib/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig/:$PKG_CONFIG_LIBDIR
