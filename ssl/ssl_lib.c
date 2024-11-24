@@ -9,8 +9,10 @@
  * https://www.openssl.org/source/license.html
  */
 
-#include "ssl_local.h"
 #include "internal/e_os.h"
+#include "internal/e_winsock.h"
+#include "ssl_local.h"
+
 #include <openssl/objects.h>
 #include <openssl/x509v3.h>
 #include <openssl/rand.h>
@@ -25,6 +27,7 @@
 #include "internal/cryptlib.h"
 #include "internal/nelem.h"
 #include "internal/refcount.h"
+#include "internal/thread_once.h"
 #include "internal/ktls.h"
 #include "internal/to_hex.h"
 #include "quic/quic_local.h"
@@ -725,7 +728,8 @@ int ossl_ssl_init(SSL *ssl, SSL_CTX *ctx, const SSL_METHOD *method, int type)
     return 1;
 }
 
-SSL *ossl_ssl_connection_new_int(SSL_CTX *ctx, const SSL_METHOD *method)
+SSL *ossl_ssl_connection_new_int(SSL_CTX *ctx, SSL *user_ssl,
+                                 const SSL_METHOD *method)
 {
     SSL_CONNECTION *s;
     SSL *ssl;
@@ -735,6 +739,8 @@ SSL *ossl_ssl_connection_new_int(SSL_CTX *ctx, const SSL_METHOD *method)
         return NULL;
 
     ssl = &s->ssl;
+    s->user_ssl = (user_ssl == NULL) ? ssl : user_ssl;
+
     if (!ossl_ssl_init(ssl, ctx, method, SSL_TYPE_SSL_CONNECTION)) {
         OPENSSL_free(s);
         s = NULL;
@@ -930,7 +936,7 @@ SSL *ossl_ssl_connection_new_int(SSL_CTX *ctx, const SSL_METHOD *method)
 
 SSL *ossl_ssl_connection_new(SSL_CTX *ctx)
 {
-    return ossl_ssl_connection_new_int(ctx, ctx->method);
+    return ossl_ssl_connection_new_int(ctx, NULL, ctx->method);
 }
 
 int SSL_is_dtls(const SSL *s)
@@ -3342,7 +3348,7 @@ int SSL_CTX_set_cipher_list(SSL_CTX *ctx, const char *str)
      */
     if (sk == NULL)
         return 0;
-    else if (cipher_list_tls12_num(sk) == 0) {
+    if (ctx->method->num_ciphers() > 0 && cipher_list_tls12_num(sk) == 0) {
         ERR_raise(ERR_LIB_SSL, SSL_R_NO_CIPHER_MATCH);
         return 0;
     }
@@ -3354,17 +3360,19 @@ int SSL_set_cipher_list(SSL *s, const char *str)
 {
     STACK_OF(SSL_CIPHER) *sk;
     SSL_CONNECTION *sc = SSL_CONNECTION_FROM_SSL(s);
+    SSL_CTX *ctx;
 
     if (sc == NULL)
         return 0;
 
-    sk = ssl_create_cipher_list(s->ctx, sc->tls13_ciphersuites,
+    ctx = s->ctx;
+    sk = ssl_create_cipher_list(ctx, sc->tls13_ciphersuites,
                                 &sc->cipher_list, &sc->cipher_list_by_id, str,
                                 sc->cert);
     /* see comment in SSL_CTX_set_cipher_list */
     if (sk == NULL)
         return 0;
-    else if (cipher_list_tls12_num(sk) == 0) {
+    if (ctx->method->num_ciphers() > 0 && cipher_list_tls12_num(sk) == 0) {
         ERR_raise(ERR_LIB_SSL, SSL_R_NO_CIPHER_MATCH);
         return 0;
     }
@@ -3847,6 +3855,75 @@ static int ssl_session_cmp(const SSL_SESSION *a, const SSL_SESSION *b)
     return memcmp(a->session_id, b->session_id, a->session_id_length);
 }
 
+#ifndef OPENSSL_NO_SSLKEYLOG
+/**
+ * @brief Static initialization for a one-time action to initialize the SSL key log.
+ */
+static CRYPTO_ONCE ssl_keylog_once = CRYPTO_ONCE_STATIC_INIT;
+
+/**
+ * @brief Pointer to a read-write lock used to protect access to the key log.
+ */
+static CRYPTO_RWLOCK *keylog_lock = NULL;
+
+/**
+ * @brief Pointer to a BIO structure used for writing the key log information.
+ */
+static BIO *keylog_bio = NULL;
+
+/**
+ * @brief Initializes the SSLKEYLOGFILE lock.
+ *
+ * @return 1 on success, 0 on failure.
+ */
+DEFINE_RUN_ONCE_STATIC(ssl_keylog_init)
+{
+    keylog_lock = CRYPTO_THREAD_lock_new();
+    if (keylog_lock == NULL)
+        return 0;
+    return 1;
+}
+
+/**
+ * @brief checks when a BIO refcount has reached zero, and sets
+ * keylog_cb to NULL if it has
+ *
+ * @returns 1 always
+ */
+static long check_keylog_bio_free(BIO *b, int oper, const char *argp,
+                                  size_t len, int argi, long argl, int ret,
+                                  size_t *processed)
+{
+
+    /*
+     * Note we _dont_ take the keylog_lock here
+     * This is intentional, because we only free the keylog lock
+     * During SSL_CTX_free, in which we already posess the lock, so
+     * Theres no need to grab it again here
+     */
+    if (oper == BIO_CB_FREE)
+        keylog_bio = NULL;
+    return ret;
+}
+
+/**
+ * @brief records ssl secrets to a file
+ */
+static void do_sslkeylogfile(const SSL *ssl, const char *line)
+{
+    if (keylog_lock == NULL)
+        return;
+
+    if (!CRYPTO_THREAD_write_lock(keylog_lock))
+        return;
+    if (keylog_bio != NULL) {
+        BIO_printf(keylog_bio, "%s\n", line);
+        (void)BIO_flush(keylog_bio);
+    }
+    CRYPTO_THREAD_unlock(keylog_lock);
+}
+#endif
+
 /*
  * These wrapper functions should remain rather than redeclaring
  * SSL_SESSION_hash and SSL_SESSION_cmp for void* types and casting each
@@ -3858,6 +3935,9 @@ SSL_CTX *SSL_CTX_new_ex(OSSL_LIB_CTX *libctx, const char *propq,
                         const SSL_METHOD *meth)
 {
     SSL_CTX *ret = NULL;
+#ifndef OPENSSL_NO_SSLKEYLOG
+    const char *keylogfile = ossl_safe_getenv("SSLKEYLOGFILE");
+#endif
 #ifndef OPENSSL_NO_COMP_ALG
     int i;
 #endif
@@ -4118,9 +4198,51 @@ SSL_CTX *SSL_CTX_new_ex(OSSL_LIB_CTX *libctx, const char *propq,
         goto err;
     }
 
+#ifndef OPENSSL_NO_SSLKEYLOG
+    if (keylogfile != NULL && strlen(keylogfile) != 0) {
+        /* Make sure we have a global lock allocated */
+        if (!RUN_ONCE(&ssl_keylog_once, ssl_keylog_init)) {
+            /* use a trace message as a warning */
+            OSSL_TRACE(TLS, "Unable to initalize keylog data\n");
+            goto out;
+        }
+
+        /* Grab our global lock */
+        if (!CRYPTO_THREAD_write_lock(keylog_lock)) {
+            OSSL_TRACE(TLS, "Unable to acquire keylog write lock\n");
+            goto out;
+        } else {
+            /*
+             * If the bio for the requested keylog file hasn't been
+             * created yet, go ahead and create it, and set it to append
+             * if its already there.
+             */
+            if (keylog_bio == NULL) {
+                keylog_bio = BIO_new_file(keylogfile, "a");
+                if (keylog_bio == NULL) {
+                    OSSL_TRACE(TLS, "Unable to create keylog bio\n");
+                    goto out;
+                }
+                BIO_set_callback_ex(keylog_bio, check_keylog_bio_free);
+            } else {
+                /* up our refcount for the already-created case */
+                BIO_up_ref(keylog_bio);
+            }
+            /* If we have a bio now, assign the callback handler */
+            if (keylog_bio != NULL)
+                ret->do_sslkeylog = 1;
+            /* unlock, and we're done */
+            CRYPTO_THREAD_unlock(keylog_lock);
+        }
+    }
+out:
+#endif
     return ret;
  err:
     SSL_CTX_free(ret);
+#ifndef OPENSSL_NO_SSLKEYLOG
+    BIO_free(keylog_bio);
+#endif
     return NULL;
 }
 
@@ -4154,6 +4276,15 @@ void SSL_CTX_free(SSL_CTX *a)
     if (i > 0)
         return;
     REF_ASSERT_ISNT(i < 0);
+
+#ifndef OPENSSL_NO_SSLKEYLOG
+    if (keylog_lock != NULL && CRYPTO_THREAD_write_lock(keylog_lock)) {
+        if (a->do_sslkeylog == 1)
+            BIO_free(keylog_bio);
+        a->do_sslkeylog = 0;
+        CRYPTO_THREAD_unlock(keylog_lock);
+    }
+#endif
 
     X509_VERIFY_PARAM_free(a->param);
     dane_ctx_final(&a->dane);
@@ -4546,7 +4677,7 @@ void ssl_update_cache(SSL_CONNECTION *s, int mode)
          */
         if (s->session_ctx->new_session_cb != NULL) {
             SSL_SESSION_up_ref(s->session);
-            if (!s->session_ctx->new_session_cb(SSL_CONNECTION_GET_SSL(s),
+            if (!s->session_ctx->new_session_cb(SSL_CONNECTION_GET_USER_SSL(s),
                                                 s->session))
                 SSL_SESSION_free(s->session);
         }
@@ -4812,11 +4943,6 @@ int ssl_undefined_void_function(void)
     return 0;
 }
 
-int ssl_undefined_const_function(const SSL *s)
-{
-    return 0;
-}
-
 const char *ssl_protocol_to_string(int version)
 {
     switch (version) {
@@ -4914,7 +5040,7 @@ SSL *SSL_dup(SSL *s)
 {
     SSL *ret;
     int i;
-    /* TODO(QUIC FUTURE): Add a SSL_METHOD function for duplication */
+    /* TODO(QUIC FUTURE): Add an SSL_METHOD function for duplication */
     SSL_CONNECTION *retsc;
     SSL_CONNECTION *sc = SSL_CONNECTION_FROM_SSL_ONLY(s);
 
@@ -6753,8 +6879,13 @@ static int nss_keylog_int(const char *prefix,
     size_t out_len = 0, i, prefix_len;
     SSL_CTX *sctx = SSL_CONNECTION_GET_CTX(sc);
 
+#ifndef OPENSSL_NO_SSLKEYLOG
+    if (sctx->keylog_callback == NULL && sctx->do_sslkeylog == 0)
+        return 1;
+#else
     if (sctx->keylog_callback == NULL)
         return 1;
+#endif
 
     /*
      * Our output buffer will contain the following strings, rendered with
@@ -6781,7 +6912,12 @@ static int nss_keylog_int(const char *prefix,
         cursor += ossl_to_lowerhex(cursor, parameter_2[i]);
     *cursor = '\0';
 
-    sctx->keylog_callback(SSL_CONNECTION_GET_SSL(sc), (const char *)out);
+#ifndef OPENSSL_NO_SSLKEYLOG
+    if (sctx->do_sslkeylog == 1)
+        do_sslkeylogfile(SSL_CONNECTION_GET_SSL(sc), (const char *)out);
+#endif
+    if (sctx->keylog_callback != NULL)
+        sctx->keylog_callback(SSL_CONNECTION_GET_USER_SSL(sc), (const char *)out);
     OPENSSL_clear_free(out, out_len);
     return 1;
 }

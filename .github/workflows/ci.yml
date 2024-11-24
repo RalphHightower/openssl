@@ -26,7 +26,7 @@ env:
 
 jobs:
   check_update:
-    runs-on: ${{ github.server_url == 'https://github.com' && 'ubuntu-latest' || 'ubuntu-22.04-self-hosted' }}
+    runs-on: ubuntu-latest
     steps:
     - name: install unifdef
       run: |
@@ -45,7 +45,7 @@ jobs:
       run: git diff --exit-code
 
   check_docs:
-    runs-on: ${{ github.server_url == 'https://github.com' && 'ubuntu-latest' || 'ubuntu-22.04-self-hosted' }}
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - name: config
@@ -65,16 +65,16 @@ jobs:
   # We are not as strict with libraries, but rather adapt to what's
   # expected to be available in a certain version of each platform.
   check-ansi:
-    runs-on: ${{ github.server_url == 'https://github.com' && 'ubuntu-latest' || 'ubuntu-22.04-self-hosted' }}
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - name: config
-      run: CPPFLAGS='-ansi -D_XOPEN_SOURCE=1 -D_POSIX_C_SOURCE=200809L' ./config --banner=Configured no-asm no-secure-memory no-makedepend enable-buildtest-c++ enable-fips --strict-warnings && perl configdata.pm --dump
+      run: CPPFLAGS='-ansi -D_XOPEN_SOURCE=1 -D_POSIX_C_SOURCE=200809L' ./config --banner=Configured enable-sslkeylog no-asm no-secure-memory no-makedepend enable-buildtest-c++ enable-fips --strict-warnings && perl configdata.pm --dump
     - name: make
       run: make -s -j4
 
   basic_gcc:
-    runs-on: ${{ github.server_url == 'https://github.com' && 'ubuntu-latest' || 'ubuntu-22.04-self-hosted' }}
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - name: checkout fuzz/corpora submodule
@@ -86,7 +86,7 @@ jobs:
       run: echo "FIPS_VENDOR=CI" >> VERSION.dat
     - name: config
       # enable-quic is on by default, but we leave it here to check we're testing the explicit enable somewhere
-      run: CC=gcc ./config --banner=Configured enable-demos enable-h3demo enable-fips enable-quic --strict-warnings && perl configdata.pm --dump
+      run: CC=gcc ./config --banner=Configured enable-demos enable-h3demo enable-sslkeylog enable-fips enable-quic --strict-warnings && perl configdata.pm --dump
     - name: make
       run: make -s -j4
     - name: get cpu info
@@ -105,7 +105,7 @@ jobs:
         path: artifacts.tar.gz
 
   basic_clang:
-    runs-on: ${{ github.server_url == 'https://github.com' && 'ubuntu-latest' || 'ubuntu-22.04-self-hosted' }}
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - name: checkout fuzz/corpora submodule
@@ -152,7 +152,7 @@ jobs:
         path: artifacts.tar.gz
 
   minimal:
-    runs-on: ${{ github.server_url == 'https://github.com' && 'ubuntu-latest' || 'ubuntu-22.04-self-hosted' }}
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - name: checkout fuzz/corpora submodule
@@ -174,7 +174,7 @@ jobs:
         path: artifacts.tar.gz
 
   no-deprecated:
-    runs-on: ${{ github.server_url == 'https://github.com' && 'ubuntu-latest' || 'ubuntu-22.04-self-hosted' }}
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - name: checkout fuzz/corpora submodule
@@ -196,7 +196,7 @@ jobs:
         path: artifacts.tar.gz
 
   no-shared-ubuntu:
-    runs-on: ${{ github.server_url == 'https://github.com' && 'ubuntu-latest' || 'ubuntu-22.04-self-hosted' }}
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - name: checkout fuzz/corpora submodule
@@ -222,7 +222,6 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-13, macos-14]
-    if: github.server_url == 'https://github.com'
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v4
@@ -245,7 +244,7 @@ jobs:
         path: artifacts.tar.gz
 
   non-caching:
-    runs-on: ${{ github.server_url == 'https://github.com' && 'ubuntu-latest' || 'ubuntu-22.04-self-hosted' }}
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - name: checkout fuzz/corpora submodule
@@ -271,7 +270,7 @@ jobs:
         path: artifacts.tar.gz
 
   address_ub_sanitizer:
-    runs-on: ${{ github.server_url == 'https://github.com' && 'ubuntu-latest' || 'ubuntu-22.04-self-hosted' }}
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - name: checkout fuzz/corpora submodule
@@ -297,7 +296,7 @@ jobs:
         path: artifacts.tar.gz
 
   fuzz_tests:
-    runs-on: ${{ github.server_url == 'https://github.com' && 'ubuntu-latest' || 'ubuntu-22.04-self-hosted' }}
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - name: checkout fuzz/corpora submodule
@@ -324,7 +323,7 @@ jobs:
         if-no-files-found: ignore
 
   memory_sanitizer:
-    runs-on: ${{ github.server_url == 'https://github.com' && 'ubuntu-latest' || 'ubuntu-22.04-self-hosted' }}
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - name: checkout fuzz/corpora submodule
@@ -351,7 +350,7 @@ jobs:
         path: artifacts.tar.gz
 
   threads_sanitizer:
-    runs-on: ${{ github.server_url == 'https://github.com' && 'ubuntu-latest' || 'ubuntu-22.04-self-hosted' }}
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - name: checkout fuzz/corpora submodule
@@ -377,7 +376,7 @@ jobs:
         path: artifacts.tar.gz
 
   enable_non-default_options:
-    runs-on: ${{ github.server_url == 'https://github.com' && 'ubuntu-latest' || 'ubuntu-22.04-self-hosted' }}
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - name: checkout fuzz/corpora submodule
@@ -401,7 +400,7 @@ jobs:
         path: artifacts.tar.gz
 
   full_featured:
-    runs-on: ${{ github.server_url == 'https://github.com' && 'ubuntu-latest' || 'ubuntu-22.04-self-hosted' }}
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - name: checkout fuzz/corpora submodule
@@ -431,7 +430,7 @@ jobs:
         path: artifacts.tar.gz
 
   no-legacy:
-    runs-on: ${{ github.server_url == 'https://github.com' && 'ubuntu-latest' || 'ubuntu-22.04-self-hosted' }}
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - name: checkout fuzz/corpora submodule
@@ -453,7 +452,7 @@ jobs:
         path: artifacts.tar.gz
 
   legacy:
-    runs-on: ${{ github.server_url == 'https://github.com' && 'ubuntu-latest' || 'ubuntu-22.04-self-hosted' }}
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - name: checkout fuzz/corpora submodule
@@ -480,7 +479,7 @@ jobs:
   # - That building, testing and installing works with a read-only source
   #   tree
   out-of-readonly-source-and-install-ubuntu:
-    runs-on: ${{ github.server_url == 'https://github.com' && 'ubuntu-latest' || 'ubuntu-22.04-self-hosted' }}
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
       with:
@@ -525,7 +524,6 @@ jobs:
       matrix:
         os: [macos-13, macos-14]
     runs-on: ${{ matrix.os }}
-    if: github.server_url == 'https://github.com'
     steps:
     - uses: actions/checkout@v4
       with:
@@ -564,8 +562,8 @@ jobs:
       run: make install
       working-directory: ./build
 
-  external-tests:
-    runs-on: ${{ github.server_url == 'https://github.com' && 'ubuntu-latest' || 'ubuntu-22.04-self-hosted' }}
+  external-tests-misc:
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
       with:
@@ -584,6 +582,7 @@ jobs:
       run: ./config --banner=Configured --strict-warnings --debug no-afalgeng enable-rc5 enable-md2 enable-ssl3 enable-ssl3-method enable-weak-ssl-ciphers enable-zlib enable-ec_nistp_64_gcc_128 enable-external-tests no-fips && perl configdata.pm --dump
     - name: make
       run: make -s -j4
+    - uses: dtolnay/rust-toolchain@stable
     - name: get cpu info
       run: |
         cat /proc/cpuinfo
@@ -592,18 +591,41 @@ jobs:
       run: make test TESTS="test_external_gost_engine"
     - name: test external krb5
       run: make test TESTS="test_external_krb5"
-    - name: test external_tlsfuzzer
+    - name: test external tlsfuzzer
       run: make test TESTS="test_external_tlsfuzzer"
-    - name: test external oqs-provider
-      run: make test TESTS="test_external_oqsprovider"
+    - name: test external Cloudflare quiche
+      run: make test TESTS="test_external_cf_quiche" VERBOSE=1
     - name: test ability to produce debuginfo files
       run: |
         make debuginfo
         gdb < <(echo -e "file ./libcrypto.so.3\nquit") > ./results
         grep -q "Reading symbols from.*libcrypto\.so\.3\.debug" results
 
-  external-test-pyca:
-    runs-on: ${{ github.server_url == 'https://github.com' && 'ubuntu-latest' || 'ubuntu-22.04-self-hosted' }}
+  external-tests-providers:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    - name: package installs
+      run: |
+        sudo apt-get update
+        sudo apt-get -yq install meson pkg-config gnutls-bin libnss3-tools libnss3-dev libsofthsm2 opensc expect
+    - name: config
+      run: ./config --banner=Configured --strict-warnings --debug enable-external-tests && perl configdata.pm --dump
+    - name: make
+      run: make -s -j4
+    - name: get cpu info
+      run: |
+        cat /proc/cpuinfo
+        ./util/opensslwrap.sh version -c
+    - name: test external oqs-provider
+      run: make test TESTS="test_external_oqsprovider"
+    - name: test external pkcs11-provider
+      run: make test TESTS="test_external_pkcs11_provider" VERBOSE=1
+
+  external-tests-pyca:
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         RUST:
@@ -619,7 +641,7 @@ jobs:
     - name: make
       run: make -s -j4
     - name: Setup Python
-      uses: actions/setup-python@v5.1.1
+      uses: actions/setup-python@v5.3.0
       with:
         python-version: ${{ matrix.PYTHON }}
     - uses: dtolnay/rust-toolchain@master
@@ -631,21 +653,3 @@ jobs:
         ./util/opensslwrap.sh version -c
     - name: test external pyca
       run: make test TESTS="test_external_pyca" VERBOSE=1
-
-  external-test-cf-quiche:
-    runs-on: ${{ github.server_url == 'https://github.com' && 'ubuntu-latest' || 'ubuntu-22.04-self-hosted' }}
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: recursive
-    - name: Configure OpenSSL
-      run: ./config --banner=Configured --strict-warnings enable-external-tests && perl configdata.pm --dump
-    - name: make
-      run: make -s -j4
-    - uses: dtolnay/rust-toolchain@stable
-    - name: get cpu info
-      run: |
-        cat /proc/cpuinfo
-        ./util/opensslwrap.sh version -c
-    - name: test external Cloudflare quiche
-      run: make test TESTS="test_external_cf_quiche" VERBOSE=1

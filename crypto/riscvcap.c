@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2022-2024 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -48,7 +48,7 @@ size_t OPENSSL_instrument_bus2(unsigned int *out, size_t cnt, size_t max)
 static void strtoupper(char *str)
 {
     for (char *x = str; *x; ++x)
-        *x = toupper(*x);
+        *x = toupper((unsigned char)*x);
 }
 
 /* parse_env() parses a RISC-V architecture string. An example of such a string

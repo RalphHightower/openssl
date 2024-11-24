@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2023 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2020-2024 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -19,7 +19,6 @@
 #include <openssl/core_names.h>
 #include <openssl/obj_mac.h>
 #include "prov/securitycheck.h"
-#include "prov/fipsindicator.h"
 
 #define OSSL_FIPS_MIN_SECURITY_STRENGTH_BITS 112
 

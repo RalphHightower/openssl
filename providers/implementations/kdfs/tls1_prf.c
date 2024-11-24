@@ -68,8 +68,6 @@
 #include "prov/implementations.h"
 #include "prov/provider_util.h"
 #include "prov/securitycheck.h"
-#include "prov/fipscommon.h"
-#include "prov/fipsindicator.h"
 #include "internal/e_os.h"
 #include "internal/safe_math.h"
 
@@ -196,7 +194,7 @@ static int fips_ems_check_passed(TLS1_PRF *ctx)
     if (!ems_approved) {
         if (!OSSL_FIPS_IND_ON_UNAPPROVED(ctx, OSSL_FIPS_IND_SETTABLE0,
                                          libctx, "TLS_PRF", "EMS",
-                                         FIPS_tls_prf_ems_check)) {
+                                         ossl_fips_config_tls1_prf_ems_check)) {
             ERR_raise(ERR_LIB_PROV, PROV_R_EMS_NOT_ENABLED);
             return 0;
         }
@@ -221,7 +219,7 @@ static int fips_digest_check_passed(TLS1_PRF *ctx, const EVP_MD *md)
     if (digest_unapproved) {
         if (!OSSL_FIPS_IND_ON_UNAPPROVED(ctx, OSSL_FIPS_IND_SETTABLE1,
                                          libctx, "TLS_PRF", "Digest",
-                                         FIPS_tls1_prf_digest_check)) {
+                                         ossl_fips_config_tls1_prf_digest_check)) {
             ERR_raise(ERR_LIB_PROV, PROV_R_DIGEST_NOT_ALLOWED);
             return 0;
         }
@@ -237,7 +235,7 @@ static int fips_key_check_passed(TLS1_PRF *ctx)
     if (!key_approved) {
         if (!OSSL_FIPS_IND_ON_UNAPPROVED(ctx, OSSL_FIPS_IND_SETTABLE2,
                                          libctx, "TLS_PRF", "Key size",
-                                         FIPS_tls1_prf_key_check)) {
+                                         ossl_fips_config_tls1_prf_key_check)) {
             ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_KEY_LENGTH);
             return 0;
         }
@@ -288,7 +286,7 @@ static int kdf_tls1_prf_set_ctx_params(void *vctx, const OSSL_PARAM params[])
     TLS1_PRF *ctx = vctx;
     OSSL_LIB_CTX *libctx = PROV_LIBCTX_OF(ctx->provctx);
 
-    if (params == NULL)
+    if (ossl_param_is_empty(params))
         return 1;
 
     if (!OSSL_FIPS_IND_SET_CTX_PARAM(ctx, OSSL_FIPS_IND_SETTABLE0, params,
@@ -326,7 +324,7 @@ static int kdf_tls1_prf_set_ctx_params(void *vctx, const OSSL_PARAM params[])
             return 0;
 
         md = ossl_prov_digest_md(&digest);
-        if ((EVP_MD_get_flags(md) & EVP_MD_FLAG_XOF) != 0) {
+        if (EVP_MD_xof(md)) {
             ERR_raise(ERR_LIB_PROV, PROV_R_XOF_DIGESTS_NOT_ALLOWED);
             ossl_prov_digest_reset(&digest);
             return 0;

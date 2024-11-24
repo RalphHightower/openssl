@@ -74,17 +74,21 @@ struct OPENSSL_s390xcap_st {
     unsigned long long kdsa[2];
 };
 
-#if defined(__GNUC__) && defined(__linux)
-__attribute__ ((visibility("hidden")))
-#endif
+#  if defined(__GNUC__) && defined(__linux)
+__attribute__((visibility("hidden")))
+#  endif
 extern struct OPENSSL_s390xcap_st OPENSSL_s390xcap_P;
 
-#ifdef S390X_MOD_EXP
-# if defined(__GNUC__) && defined(__linux)
-__attribute__ ((visibility("hidden")))
-# endif
+#  ifdef S390X_MOD_EXP
+#   if defined(__GNUC__) && defined(__linux)
+__attribute__((visibility("hidden")))
+#   endif
 extern int OPENSSL_s390xcex;
-#endif
+#   if defined(__GNUC__) && defined(__linux)
+__attribute__((visibility("hidden")))
+#   endif
+extern int OPENSSL_s390xcex_nodev;
+#  endif
 
 /* Max number of 64-bit words currently returned by STFLE */
 #  define S390X_STFLE_MAX       3
@@ -191,6 +195,9 @@ extern int OPENSSL_s390xcex;
 # define S390X_KMA_LAAD         0x200
 # define S390X_KMA_HS           0x400
 # define S390X_KDSA_D           0x80
+# define S390X_KIMD_NIP         0x8000
+# define S390X_KLMD_DUFOP       0x4000
+# define S390X_KLMD_NIP         0x8000
 # define S390X_KLMD_PS          0x100
 # define S390X_KMAC_IKP         0x8000
 # define S390X_KMAC_IIMP        0x4000

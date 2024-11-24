@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2012-2024 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -547,6 +547,8 @@ static const ssl_trace_tbl ssl_groups_tbl[] = {
     {258, "ffdhe4096"},
     {259, "ffdhe6144"},
     {260, "ffdhe8192"},
+    {4587, "SecP256r1MLKEM768"},
+    {4588, "X25519MLKEM768"},
     {25497, "X25519Kyber768Draft00"},
     {25498, "SecP256r1Kyber768Draft00"},
     {0xFF01, "arbitrary_explicit_prime_curves"},

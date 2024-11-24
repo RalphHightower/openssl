@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2023 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2002-2024 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -104,6 +104,10 @@ int ossl_ecdsa_deterministic_sign(const unsigned char *dgst, int dlen,
 
     if (sig == NULL) {
         ERR_raise(ERR_LIB_EC, ERR_R_PASSED_NULL_PARAMETER);
+        return 0;
+    }
+    if (digestname == NULL) {
+        ERR_raise(ERR_LIB_EC, EC_R_INVALID_DIGEST);
         return 0;
     }
 

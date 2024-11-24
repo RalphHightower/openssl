@@ -46,6 +46,7 @@ my %params = (
     'PROV_PARAM_TDES_ENCRYPT_DISABLED' =>  "tdes-encrypt-disabled",  # uint
     'PROV_PARAM_RSA_PSS_SALTLEN_CHECK' =>  "rsa-pss-saltlen-check",  # uint
     'PROV_PARAM_RSA_SIGN_X931_PAD_DISABLED' =>  "rsa-sign-x931-pad-disabled",   # uint
+    'PROV_PARAM_RSA_PKCS15_PAD_DISABLED' => "rsa-pkcs15-pad-disabled", # uint
     'PROV_PARAM_HKDF_KEY_CHECK' =>         "hkdf-key-check",         # uint
     'PROV_PARAM_KBKDF_KEY_CHECK' =>        "kbkdf-key-check",        # uint
     'PROV_PARAM_TLS13_KDF_KEY_CHECK' =>    "tls13-kdf-key-check",    # uint
@@ -53,8 +54,10 @@ my %params = (
     'PROV_PARAM_SSHKDF_KEY_CHECK' =>       "sshkdf-key-check",       # uint
     'PROV_PARAM_SSKDF_KEY_CHECK' =>        "sskdf-key-check",        # uint
     'PROV_PARAM_X963KDF_KEY_CHECK' =>      "x963kdf-key-check",      # uint
+    'PROV_PARAM_X942KDF_KEY_CHECK' =>      "x942kdf-key-check",      # uint
     'PROV_PARAM_PBKDF2_LOWER_BOUND_CHECK' => "pbkdf2-lower-bound-check", # uint
     'PROV_PARAM_ECDH_COFACTOR_CHECK' =>    "ecdh-cofactor-check",    # uint
+    'PROV_PARAM_SIGNATURE_DIGEST_CHECK' => "signature-digest-check", # uint
 
 # Self test callback parameters
     'PROV_PARAM_SELF_TEST_PHASE' =>  "st-phase",# utf8_string
@@ -90,6 +93,16 @@ my %params = (
     'ALG_PARAM_MAC' =>          "mac",          # utf8_string
     'ALG_PARAM_PROPERTIES' =>   "properties",   # utf8_string
     'ALG_PARAM_FIPS_APPROVED_INDICATOR' => 'fips-indicator',   # int, -1, 0 or 1
+
+    # For any operation that deals with AlgorithmIdentifier, they should
+    # implement both of these.
+    # ALG_PARAM_ALGORITHM_ID is intended to be gettable, and is the
+    # implementation's idea of what its full AlgID should look like.
+    # ALG_PARAM_ALGORITHM_ID_PARAMS is intended to be both settable
+    # and gettable, to allow the calling application to pass or get
+    # AlgID parameters to and from the provided implementation.
+    'ALG_PARAM_ALGORITHM_ID' => "algorithm-id", # octet_string (DER)
+    'ALG_PARAM_ALGORITHM_ID_PARAMS' =>  "algorithm-id-params", # octet_string
 
 # cipher parameters
     'CIPHER_PARAM_PADDING' =>              "padding",     # uint
@@ -127,8 +140,13 @@ my %params = (
     'CIPHER_PARAM_DECRYPT_ONLY' =>         "decrypt-only",  # int, 0 or 1
     'CIPHER_PARAM_FIPS_ENCRYPT_CHECK' =>   "encrypt-check", # int
     'CIPHER_PARAM_FIPS_APPROVED_INDICATOR' => '*ALG_PARAM_FIPS_APPROVED_INDICATOR',
-# For passing the AlgorithmIdentifier parameter in DER form
-    'CIPHER_PARAM_ALGORITHM_ID_PARAMS' =>  "alg_id_param",# octet_string
+    'CIPHER_PARAM_ALGORITHM_ID' =>         '*ALG_PARAM_ALGORITHM_ID',
+    # Historically, CIPHER_PARAM_ALGORITHM_ID_PARAMS_OLD was used.  For the
+    # time being, the old libcrypto functions will use both, so old providers
+    # continue to work.
+    # New providers are encouraged to use CIPHER_PARAM_ALGORITHM_ID_PARAMS.
+    'CIPHER_PARAM_ALGORITHM_ID_PARAMS' =>  '*ALG_PARAM_ALGORITHM_ID_PARAMS',
+    'CIPHER_PARAM_ALGORITHM_ID_PARAMS_OLD' => "alg_id_param", # octet_string
     'CIPHER_PARAM_XTS_STANDARD' =>         "xts_standard",# utf8_string
 
     'CIPHER_PARAM_TLS1_MULTIBLOCK_MAX_SEND_FRAGMENT' =>  "tls1multi_maxsndfrag",# uint
@@ -173,6 +191,7 @@ my %params = (
     'MAC_PARAM_FIPS_NO_SHORT_MAC' =>'*PROV_PARAM_NO_SHORT_MAC',
     'MAC_PARAM_FIPS_KEY_CHECK' =>   '*PKEY_PARAM_FIPS_KEY_CHECK',
     'MAC_PARAM_FIPS_APPROVED_INDICATOR' => '*ALG_PARAM_FIPS_APPROVED_INDICATOR',
+    'MAC_PARAM_FIPS_NO_SHORT_MAC' => '*PROV_PARAM_NO_SHORT_MAC',
 
 # KDF / PRF parameters
     'KDF_PARAM_SECRET' =>       "secret",                   # octet string
@@ -286,6 +305,8 @@ my %params = (
     'PKEY_PARAM_IMPLICIT_REJECTION' =>  "implicit-rejection",
     'PKEY_PARAM_FIPS_DIGEST_CHECK' =>   "digest-check",
     'PKEY_PARAM_FIPS_KEY_CHECK' =>      "key-check",
+    'PKEY_PARAM_ALGORITHM_ID' =>        '*ALG_PARAM_ALGORITHM_ID',
+    'PKEY_PARAM_ALGORITHM_ID_PARAMS' => '*ALG_PARAM_ALGORITHM_ID_PARAMS',
 
 # Diffie-Hellman/DSA Parameters
     'PKEY_PARAM_FFC_P' =>               "p",
@@ -421,21 +442,22 @@ my %params = (
     'EXCHANGE_PARAM_FIPS_APPROVED_INDICATOR' => '*ALG_PARAM_FIPS_APPROVED_INDICATOR',
 
 # Signature parameters
-    'SIGNATURE_PARAM_ALGORITHM_ID' =>       "algorithm-id",
-    'SIGNATURE_PARAM_PAD_MODE' =>           '*PKEY_PARAM_PAD_MODE',
-    'SIGNATURE_PARAM_DIGEST' =>             '*PKEY_PARAM_DIGEST',
-    'SIGNATURE_PARAM_PROPERTIES' =>         '*PKEY_PARAM_PROPERTIES',
-    'SIGNATURE_PARAM_PSS_SALTLEN' =>        "saltlen",
-    'SIGNATURE_PARAM_MGF1_DIGEST' =>        '*PKEY_PARAM_MGF1_DIGEST',
-    'SIGNATURE_PARAM_MGF1_PROPERTIES' =>    '*PKEY_PARAM_MGF1_PROPERTIES',
-    'SIGNATURE_PARAM_DIGEST_SIZE' =>        '*PKEY_PARAM_DIGEST_SIZE',
-    'SIGNATURE_PARAM_NONCE_TYPE' =>         "nonce-type",
-    'SIGNATURE_PARAM_INSTANCE' =>           "instance",
-    'SIGNATURE_PARAM_CONTEXT_STRING' =>     "context-string",
-    'SIGNATURE_PARAM_FIPS_DIGEST_CHECK' =>  '*PKEY_PARAM_FIPS_DIGEST_CHECK',
-    'SIGNATURE_PARAM_FIPS_VERIFY_MESSAGE' => 'verify-message',
-    'SIGNATURE_PARAM_FIPS_KEY_CHECK' =>     '*PKEY_PARAM_FIPS_KEY_CHECK',
-    'SIGNATURE_PARAM_FIPS_SIGN_CHECK' =>    '*PKEY_PARAM_FIPS_SIGN_CHECK',
+    'SIGNATURE_PARAM_ALGORITHM_ID' =>         '*PKEY_PARAM_ALGORITHM_ID',
+    'SIGNATURE_PARAM_ALGORITHM_ID_PARAMS' =>  '*PKEY_PARAM_ALGORITHM_ID_PARAMS',
+    'SIGNATURE_PARAM_PAD_MODE' =>             '*PKEY_PARAM_PAD_MODE',
+    'SIGNATURE_PARAM_DIGEST' =>               '*PKEY_PARAM_DIGEST',
+    'SIGNATURE_PARAM_PROPERTIES' =>           '*PKEY_PARAM_PROPERTIES',
+    'SIGNATURE_PARAM_PSS_SALTLEN' =>          "saltlen",
+    'SIGNATURE_PARAM_MGF1_DIGEST' =>          '*PKEY_PARAM_MGF1_DIGEST',
+    'SIGNATURE_PARAM_MGF1_PROPERTIES' =>      '*PKEY_PARAM_MGF1_PROPERTIES',
+    'SIGNATURE_PARAM_DIGEST_SIZE' =>          '*PKEY_PARAM_DIGEST_SIZE',
+    'SIGNATURE_PARAM_NONCE_TYPE' =>           "nonce-type",
+    'SIGNATURE_PARAM_INSTANCE' =>             "instance",
+    'SIGNATURE_PARAM_CONTEXT_STRING' =>       "context-string",
+    'SIGNATURE_PARAM_FIPS_DIGEST_CHECK' =>    '*PKEY_PARAM_FIPS_DIGEST_CHECK',
+    'SIGNATURE_PARAM_FIPS_VERIFY_MESSAGE' =>  'verify-message',
+    'SIGNATURE_PARAM_FIPS_KEY_CHECK' =>       '*PKEY_PARAM_FIPS_KEY_CHECK',
+    'SIGNATURE_PARAM_FIPS_SIGN_CHECK' =>      '*PKEY_PARAM_FIPS_SIGN_CHECK',
     'SIGNATURE_PARAM_FIPS_RSA_PSS_SALTLEN_CHECK' => "rsa-pss-saltlen-check",
     'SIGNATURE_PARAM_FIPS_SIGN_X931_PAD_CHECK' => "sign-x931-pad-check",
     'SIGNATURE_PARAM_FIPS_APPROVED_INDICATOR' => '*ALG_PARAM_FIPS_APPROVED_INDICATOR',
@@ -455,7 +477,7 @@ my %params = (
     'ASYM_CIPHER_PARAM_TLS_CLIENT_VERSION' =>       "tls-client-version",
     'ASYM_CIPHER_PARAM_TLS_NEGOTIATED_VERSION' =>   "tls-negotiated-version",
     'ASYM_CIPHER_PARAM_IMPLICIT_REJECTION' =>       "implicit-rejection",
-    'ASYM_CIPHER_PARAM_PKCS15_PADDING_DISABLED' =>  "pkcs15-padding-disabled",
+    'ASYM_CIPHER_PARAM_FIPS_RSA_PKCS15_PAD_DISABLED' => '*PROV_PARAM_RSA_PKCS15_PAD_DISABLED',
     'ASYM_CIPHER_PARAM_FIPS_KEY_CHECK' =>           '*PKEY_PARAM_FIPS_KEY_CHECK',
     'ASYM_CIPHER_PARAM_FIPS_APPROVED_INDICATOR' =>  '*ALG_PARAM_FIPS_APPROVED_INDICATOR',
 

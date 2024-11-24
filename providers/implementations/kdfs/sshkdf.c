@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2023 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2018-2024 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -22,8 +22,6 @@
 #include "prov/implementations.h"
 #include "prov/provider_util.h"
 #include "prov/securitycheck.h"
-#include "prov/fipscommon.h"
-#include "prov/fipsindicator.h"
 
 /* See RFC 4253, Section 7.2 */
 static OSSL_FUNC_kdf_newctx_fn kdf_sshkdf_new;
@@ -146,7 +144,7 @@ static int fips_digest_check_passed(KDF_SSHKDF *ctx, const EVP_MD *md)
     if (digest_unapproved) {
         if (!OSSL_FIPS_IND_ON_UNAPPROVED(ctx, OSSL_FIPS_IND_SETTABLE0,
                                          libctx, "SSHKDF", "Digest",
-                                         FIPS_sshkdf_digest_check)) {
+                                         ossl_fips_config_sshkdf_digest_check)) {
             ERR_raise(ERR_LIB_PROV, PROV_R_DIGEST_NOT_ALLOWED);
             return 0;
         }
@@ -162,7 +160,7 @@ static int fips_key_check_passed(KDF_SSHKDF *ctx)
     if (!key_approved) {
         if (!OSSL_FIPS_IND_ON_UNAPPROVED(ctx, OSSL_FIPS_IND_SETTABLE1,
                                          libctx, "SSHKDF", "Key size",
-                                         FIPS_sshkdf_key_check)) {
+                                         ossl_fips_config_sshkdf_key_check)) {
             ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_KEY_LENGTH);
             return 0;
         }
@@ -214,7 +212,7 @@ static int kdf_sshkdf_set_ctx_params(void *vctx, const OSSL_PARAM params[])
     KDF_SSHKDF *ctx = vctx;
     OSSL_LIB_CTX *provctx = PROV_LIBCTX_OF(ctx->provctx);
 
-    if (params == NULL)
+    if (ossl_param_is_empty(params))
         return 1;
 
     if (!OSSL_FIPS_IND_SET_CTX_PARAM(ctx, OSSL_FIPS_IND_SETTABLE0, params,
@@ -231,7 +229,7 @@ static int kdf_sshkdf_set_ctx_params(void *vctx, const OSSL_PARAM params[])
             return 0;
 
         md = ossl_prov_digest_md(&ctx->digest);
-        if ((EVP_MD_get_flags(md) & EVP_MD_FLAG_XOF) != 0) {
+        if (EVP_MD_xof(md)) {
             ERR_raise(ERR_LIB_PROV, PROV_R_XOF_DIGESTS_NOT_ALLOWED);
             return 0;
         }

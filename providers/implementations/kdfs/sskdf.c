@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2023 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2019-2024 The OpenSSL Project Authors. All Rights Reserved.
  * Copyright (c) 2019, Oracle and/or its affiliates.  All rights reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
@@ -51,8 +51,6 @@
 #include "prov/implementations.h"
 #include "prov/provider_util.h"
 #include "prov/securitycheck.h"
-#include "prov/fipscommon.h"
-#include "prov/fipsindicator.h"
 #include "internal/params.h"
 
 typedef struct {
@@ -403,7 +401,7 @@ static int fips_sskdf_key_check_passed(KDF_SSKDF *ctx)
     if (!key_approved) {
         if (!OSSL_FIPS_IND_ON_UNAPPROVED(ctx, OSSL_FIPS_IND_SETTABLE0,
                                          libctx, "SSKDF", "Key size",
-                                         FIPS_sskdf_key_check)) {
+                                         ossl_fips_config_sskdf_key_check)) {
             ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_KEY_LENGTH);
             return 0;
         }
@@ -496,7 +494,7 @@ static int fips_x963kdf_digest_check_passed(KDF_SSKDF *ctx, const EVP_MD *md)
     if (digest_unapproved) {
         if (!OSSL_FIPS_IND_ON_UNAPPROVED(ctx, OSSL_FIPS_IND_SETTABLE0,
                                          libctx, "X963KDF", "Digest",
-                                         FIPS_x963kdf_digest_check)) {
+                                         ossl_fips_config_x963kdf_digest_check)) {
             ERR_raise(ERR_LIB_PROV, PROV_R_DIGEST_NOT_ALLOWED);
             return 0;
         }
@@ -512,7 +510,7 @@ static int fips_x963kdf_key_check_passed(KDF_SSKDF *ctx)
     if (!key_approved) {
         if (!OSSL_FIPS_IND_ON_UNAPPROVED(ctx, OSSL_FIPS_IND_SETTABLE1,
                                          libctx, "X963KDF", "Key size",
-                                         FIPS_x963kdf_key_check)) {
+                                         ossl_fips_config_x963kdf_key_check)) {
             ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_KEY_LENGTH);
             return 0;
         }
@@ -559,7 +557,7 @@ static int sskdf_common_set_ctx_params(KDF_SSKDF *ctx, const OSSL_PARAM params[]
     size_t sz;
     int r;
 
-    if (params == NULL)
+    if (ossl_param_is_empty(params))
         return 1;
 
     if (!ossl_prov_macctx_load_from_params(&ctx->macctx, params,
@@ -579,7 +577,7 @@ static int sskdf_common_set_ctx_params(KDF_SSKDF *ctx, const OSSL_PARAM params[]
             return 0;
 
         md = ossl_prov_digest_md(&ctx->digest);
-        if ((EVP_MD_get_flags(md) & EVP_MD_FLAG_XOF) != 0) {
+        if (EVP_MD_xof(md)) {
             ERR_raise(ERR_LIB_PROV, PROV_R_XOF_DIGESTS_NOT_ALLOWED);
             return 0;
         }
@@ -614,7 +612,7 @@ static int sskdf_set_ctx_params(void *vctx, const OSSL_PARAM params[])
 {
     KDF_SSKDF *ctx = (KDF_SSKDF *)vctx;
 
-    if (params == NULL)
+    if (ossl_param_is_empty(params))
         return 1;
 
     if (!OSSL_FIPS_IND_SET_CTX_PARAM(ctx, OSSL_FIPS_IND_SETTABLE0, params,
@@ -649,7 +647,7 @@ static int sskdf_common_get_ctx_params(KDF_SSKDF *ctx, OSSL_PARAM params[])
 {
     OSSL_PARAM *p;
 
-    if (params == NULL)
+    if (ossl_param_is_empty(params))
         return 1;
 
     if ((p = OSSL_PARAM_locate(params, OSSL_KDF_PARAM_SIZE)) != NULL) {
@@ -664,7 +662,7 @@ static int sskdf_get_ctx_params(void *vctx, OSSL_PARAM params[])
 {
     KDF_SSKDF *ctx = (KDF_SSKDF *)vctx;
 
-    if (params == NULL)
+    if (ossl_param_is_empty(params))
         return 1;
 
     if (!sskdf_common_get_ctx_params(ctx, params))
@@ -691,7 +689,7 @@ static int x963kdf_set_ctx_params(void *vctx, const OSSL_PARAM params[])
 {
     KDF_SSKDF *ctx = (KDF_SSKDF *)vctx;
 
-    if (params == NULL)
+    if (ossl_param_is_empty(params))
         return 1;
 
     if (!OSSL_FIPS_IND_SET_CTX_PARAM(ctx, OSSL_FIPS_IND_SETTABLE0, params,

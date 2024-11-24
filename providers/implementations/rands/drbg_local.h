@@ -18,7 +18,7 @@
 # include "internal/nelem.h"
 # include "internal/numbers.h"
 # include "prov/provider_ctx.h"
-# include "prov/fipsindicator.h"
+# include "prov/securitycheck.h"
 
 /* How many times to read the TSC as a randomness source. */
 # define TSC_READ_COUNT                 4
@@ -70,7 +70,7 @@ struct prov_drbg_st {
     CRYPTO_RWLOCK *lock;
     PROV_CTX *provctx;
 
-    /* Virtual functions are cache here */
+    /* Virtual functions are cached here */
     int (*instantiate)(PROV_DRBG *drbg,
                        const unsigned char *entropy, size_t entropylen,
                        const unsigned char *nonce, size_t noncelen,
@@ -90,8 +90,6 @@ struct prov_drbg_st {
     OSSL_FUNC_rand_nonce_fn *parent_nonce;
     OSSL_FUNC_rand_get_seed_fn *parent_get_seed;
     OSSL_FUNC_rand_clear_seed_fn *parent_clear_seed;
-
-    const OSSL_DISPATCH *parent_dispatch;
 
     /*
      * Stores the return value of openssl_get_fork_id() as of when we last

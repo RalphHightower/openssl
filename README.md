@@ -5,7 +5,8 @@ Welcome to the OpenSSL Project
 
 [![github actions ci badge]][github actions ci]
 ![Nightly OS Zoo ci badge](https://github.com/openssl/openssl/actions/workflows/os-zoo.yml/badge.svg)
-![Provider Compatibility]( https://github.com/openssl/openssl/actions/workflows/provider-compatibility.yml/badge.svg)
+![Provider Compatibility](https://github.com/openssl/openssl/actions/workflows/provider-compatibility.yml/badge.svg)
+![Quic Interop](https://github.com/openssl/openssl/actions/workflows/run_quic_interop.yml/badge.svg)
 ![Daily checks](https://github.com/openssl/openssl/actions/workflows/run-checker-daily.yml/badge.svg)
 
 OpenSSL is a robust, commercial-grade, full-featured Open Source Toolkit
@@ -161,7 +162,7 @@ available online.
 Demos
 -----
 
-The are numerous source code demos for using various OpenSSL capabilities in the
+There are numerous source code demos for using various OpenSSL capabilities in the
 [demos subfolder](./demos).
 
 Wiki

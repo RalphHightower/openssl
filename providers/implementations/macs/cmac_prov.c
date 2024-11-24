@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2023 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2018-2024 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -21,12 +21,11 @@
 #include <openssl/err.h>
 #include <openssl/proverr.h>
 
+#include "prov/securitycheck.h"
 #include "prov/implementations.h"
 #include "prov/provider_ctx.h"
 #include "prov/provider_util.h"
 #include "prov/providercommon.h"
-#include "prov/fipscommon.h"
-#include "prov/fipsindicator.h"
 #include "crypto/cmac.h"
 
 /*
@@ -138,7 +137,7 @@ static int tdes_check_param(struct cmac_data_st *macctx, OSSL_PARAM *p,
     if (EVP_CIPHER_is_a(cipher, "DES-EDE3-CBC")) {
         if (!OSSL_FIPS_IND_ON_UNAPPROVED(macctx, OSSL_FIPS_IND_SETTABLE0,
                                          libctx, "CMAC", "Triple-DES",
-                                         FIPS_tdes_encrypt_check))
+                                         ossl_fips_config_tdes_encrypt_disallowed))
             return 0;
         OSSL_FIPS_IND_GET_PARAM(macctx, p, state, OSSL_FIPS_IND_SETTABLE0,
                                 OSSL_CIPHER_PARAM_FIPS_ENCRYPT_CHECK)
@@ -251,7 +250,7 @@ static int cmac_set_ctx_params(void *vmacctx, const OSSL_PARAM params[])
     OSSL_LIB_CTX *ctx = PROV_LIBCTX_OF(macctx->provctx);
     const OSSL_PARAM *p;
 
-    if (params == NULL)
+    if (ossl_param_is_empty(params))
         return 1;
 
     if (!OSSL_FIPS_IND_SET_CTX_PARAM(macctx,

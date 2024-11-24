@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2023 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2019-2024 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -9,8 +9,8 @@
 
 #include <openssl/des.h>
 #include <openssl/core_dispatch.h>
+#include "prov/securitycheck.h"
 #include "crypto/des_platform.h"
-#include "prov/fipsindicator.h"
 
 #define DES_BLOCK_SIZE 8
 #define TDES_IVLEN 8

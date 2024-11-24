@@ -1,5 +1,5 @@
 /*
- * Copyright 2006-2023 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2006-2024 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -513,7 +513,7 @@ static int create_digest(BIO *input, const char *digest, const EVP_MD *md,
     EVP_MD_CTX *md_ctx = NULL;
 
     md_value_len = EVP_MD_get_size(md);
-    if (md_value_len < 0)
+    if (md_value_len <= 0)
         return 0;
 
     if (input != NULL) {

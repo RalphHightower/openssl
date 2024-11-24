@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2023 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2019-2024 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -19,7 +19,6 @@
 #include "cipher_tdes.h"
 #include "prov/implementations.h"
 #include "prov/providercommon.h"
-#include "prov/fipscommon.h"
 
 void *ossl_tdes_newctx(void *provctx, int mode, size_t kbits, size_t blkbits,
                        size_t ivbits, uint64_t flags, const PROV_CIPHER_HW *hw)
@@ -70,7 +69,7 @@ static int tdes_encrypt_check_approved(PROV_TDES_CTX *ctx, int enc)
     if (enc && !OSSL_FIPS_IND_ON_UNAPPROVED(ctx, OSSL_FIPS_IND_SETTABLE0,
                                             ctx->base.libctx,
                                             "Triple-DES", "Encryption",
-                                            FIPS_tdes_encrypt_check))
+                                            ossl_fips_config_tdes_encrypt_disallowed))
         return 0;
     return 1;
 }

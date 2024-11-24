@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2023 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2020-2024 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -16,11 +16,11 @@
 #include <openssl/evp.h>
 #include <openssl/err.h>
 #include <openssl/randerr.h>
+#include "prov/securitycheck.h"
 #include "prov/providercommon.h"
 #include "prov/provider_ctx.h"
 #include "prov/provider_util.h"
 #include "prov/implementations.h"
-#include "prov/fipsindicator.h"
 
 static OSSL_FUNC_rand_newctx_fn test_rng_new;
 static OSSL_FUNC_rand_freectx_fn test_rng_free;
@@ -229,7 +229,7 @@ static int test_rng_set_ctx_params(void *vtest, const OSSL_PARAM params[])
     void *ptr = NULL;
     size_t size = 0;
 
-    if (params == NULL)
+    if (ossl_param_is_empty(params))
         return 1;
 
     p = OSSL_PARAM_locate_const(params, OSSL_RAND_PARAM_STRENGTH);

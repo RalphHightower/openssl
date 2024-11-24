@@ -406,16 +406,16 @@ One or more certificate filenames may be given.
 
 =item B<-I<cipher>>
 
-The encryption algorithm to use. For example triple DES (168 bits) - B<-des3>
-or 256 bit AES - B<-aes256>. Any standard algorithm name (as used by the
+The encryption algorithm to use. For example, AES (256 bits) - B<-aes256>
+or triple DES (168 bits) - B<-des3>. Any standard algorithm name (as used by the
 EVP_get_cipherbyname() function) can also be used preceded by a dash, for
 example B<-aes-128-cbc>. See L<openssl-enc(1)> for a list of ciphers
 supported by your version of OpenSSL.
 
-Currently the AES variants with GCM mode are the only supported AEAD
+Currently, the AES variants with GCM mode are the only supported AEAD
 algorithms.
 
-If not specified triple DES is used. Only used with B<-encrypt> and
+If not specified, AES-256-CBC is used as the default. Only used with B<-encrypt> and
 B<-EncryptedData_create> commands.
 
 =item B<-wrap> I<cipher>
@@ -896,6 +896,8 @@ L<ossl_store-file(7)>
 
 =head1 HISTORY
 
+The default encryption cipher was changed from 3DES to AES-256 in OpenSSL 3.5.
+
 The use of multiple B<-signer> options and the B<-resign> command were first
 added in OpenSSL 1.0.0.
 
@@ -916,7 +918,7 @@ The B<-digest> option was added in OpenSSL 3.2.
 
 =head1 COPYRIGHT
 
-Copyright 2008-2023 The OpenSSL Project Authors. All Rights Reserved.
+Copyright 2008-2024 The OpenSSL Project Authors. All Rights Reserved.
 
 Licensed under the Apache License 2.0 (the "License").  You may not use
 this file except in compliance with the License.  You can obtain a copy

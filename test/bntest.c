@@ -1,5 +1,5 @@
 /*
- * Copyright 1995-2023 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2024 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -2703,7 +2703,7 @@ static int test_not_prime(int i)
 
     for (trial = 0; trial <= 1; ++trial) {
         if (!TEST_true(BN_set_word(r, not_primes[i]))
-                || !TEST_false(BN_check_prime(r, ctx, NULL)))
+                || !TEST_int_eq(BN_check_prime(r, ctx, NULL), 0))
             goto err;
     }
 

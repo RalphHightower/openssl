@@ -1,5 +1,5 @@
 #! /usr/bin/env perl
-# Copyright 2021-2023 The OpenSSL Project Authors. All Rights Reserved.
+# Copyright 2021-2024 The OpenSSL Project Authors. All Rights Reserved.
 #
 # Licensed under the Apache License 2.0 (the "License").  You may not use
 # this file except in compliance with the License.  You can obtain a copy
@@ -71,7 +71,7 @@ sshkdf-digest-check = $digest_check
 sskdf-digest-check = $digest_check
 x963kdf-digest-check = $digest_check
 tdes-encrypt-disabled = $tdes_encrypt_disabled
-rsa-pkcs15-padding-disabled = $pkcs15_pad_disable
+rsa-pkcs15-pad-disabled = $pkcs15_pad_disable
 rsa-pss-saltlen-check = $rsa_pss_saltlen_check
 rsa-sign-x931-pad-disabled = $rsa_sign_x931_pad_disabled
 hkdf-key-check = $kdf_key_check
@@ -81,6 +81,7 @@ tls1-prf-key-check = $kdf_key_check
 sshkdf-key-check = $kdf_key_check
 sskdf-key-check = $kdf_key_check
 x963kdf-key-check = $kdf_key_check
+x942kdf-key-check = $kdf_key_check
 pbkdf2-lower-bound-check = $pbkdf2_lower_bound_check
 ecdh-cofactor-check = $ec_cofactor_check
 hmac-key-check = $mac_key_check

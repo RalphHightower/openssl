@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2023 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2018-2024 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -29,9 +29,7 @@
 #include "prov/provider_ctx.h"
 #include "prov/provider_util.h"
 #include "prov/providercommon.h"
-#include "prov/fipsindicator.h"
 #include "prov/securitycheck.h"
-#include "prov/fipscommon.h"
 
 /*
  * Forward declaration of everything implemented here.  This is not strictly
@@ -171,7 +169,7 @@ static int hmac_setkey(struct hmac_data_st *macctx,
         if (!approved) {
             if (!OSSL_FIPS_IND_ON_UNAPPROVED(macctx, OSSL_FIPS_IND_SETTABLE0,
                                              libctx, "HMAC", "keysize",
-                                             FIPS_hmac_key_check)) {
+                                             ossl_fips_config_hmac_key_check)) {
                 ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_KEY_LENGTH);
                 return 0;
             }
@@ -332,7 +330,7 @@ static int hmac_set_ctx_params(void *vmacctx, const OSSL_PARAM params[])
     OSSL_LIB_CTX *ctx = PROV_LIBCTX_OF(macctx->provctx);
     const OSSL_PARAM *p;
 
-    if (params == NULL)
+    if (ossl_param_is_empty(params))
         return 1;
 
     if (!OSSL_FIPS_IND_SET_CTX_PARAM(macctx, OSSL_FIPS_IND_SETTABLE0, params,

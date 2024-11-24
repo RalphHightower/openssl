@@ -1,7 +1,7 @@
 /*
  * {- join("\n * ", @autowarntext) -}
  *
- * Copyright 1995-2023 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2024 The OpenSSL Project Authors. All Rights Reserved.
  * Copyright (c) 2002, Oracle and/or its affiliates. All rights reserved
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
@@ -186,6 +186,7 @@ const char *OPENSSL_info(int type);
 # define OPENSSL_INFO_LIST_SEPARATOR            1006
 # define OPENSSL_INFO_SEED_SOURCE               1007
 # define OPENSSL_INFO_CPU_SETTINGS              1008
+# define OPENSSL_INFO_WINDOWS_CONTEXT           1009
 
 int OPENSSL_issetugid(void);
 

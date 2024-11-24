@@ -12,7 +12,6 @@
 #ifndef OSSL_SSL_LOCAL_H
 # define OSSL_SSL_LOCAL_H
 
-# include "internal/e_os.h"              /* struct timeval for DTLS */
 # include <stdlib.h>
 # include <time.h>
 # include <errno.h>
@@ -79,12 +78,8 @@
 # define SSL_kRSA                0x00000001U
 /* tmp DH key no DH cert */
 # define SSL_kDHE                0x00000002U
-/* synonym */
-# define SSL_kEDH                SSL_kDHE
 /* ephemeral ECDH */
 # define SSL_kECDHE              0x00000004U
-/* synonym */
-# define SSL_kEECDH              SSL_kECDHE
 /* PSK */
 # define SSL_kPSK                0x00000008U
 /* GOST key exchange */
@@ -368,12 +363,6 @@
  * SSL_aRSA <- RSA_ENC | RSA_SIGN
  * SSL_aDSS <- DSA_SIGN
  */
-
-/*-
-#define CERT_INVALID            0
-#define CERT_PUBLIC_KEY         1
-#define CERT_PRIVATE_KEY        2
-*/
 
 /* Certificate Type State */
 # define OSSL_CERT_TYPE_CTOS_NONE    0
@@ -831,7 +820,7 @@ struct ssl_ctx_st {
     /*
      * If this callback is not null, it will be called each time a session id
      * is added to the cache.  If this function returns 1, it means that the
-     * callback will do a SSL_SESSION_free() when it has finished using it.
+     * callback will do an SSL_SESSION_free() when it has finished using it.
      * Otherwise, on 0, it means the callback has finished with it. If
      * remove_session_cb is not null, it will be called when a session-id is
      * removed from the cache.  After the call, OpenSSL will
@@ -1111,6 +1100,13 @@ struct ssl_ctx_st {
     SSL_CTX_keylog_cb_func keylog_callback;
 
     /*
+     * Private flag for internal key logging based on SSLKEYLOG env
+     */
+# ifndef OPENSSL_NO_SSLKEYLOG
+    uint32_t do_sslkeylog;
+# endif
+
+    /*
      * The maximum number of bytes advertised in session tickets that can be
      * sent as early data.
      */
@@ -1210,6 +1206,13 @@ struct ssl_st {
 struct ssl_connection_st {
     /* type identifier and common data */
     struct ssl_st ssl;
+
+    /*
+     * The actual end user's SSL object. Could be different to this one for
+     * QUIC
+     */
+    SSL *user_ssl;
+
     /*
      * protocol version (one of SSL2_VERSION, SSL3_VERSION, TLS1_VERSION,
      * DTLS1_VERSION)
@@ -1817,6 +1820,7 @@ struct ssl_connection_st {
     SSL_CONNECTION_FROM_SSL_ONLY_int(ssl, const)
 # define SSL_CONNECTION_GET_CTX(sc) ((sc)->ssl.ctx)
 # define SSL_CONNECTION_GET_SSL(sc) (&(sc)->ssl)
+# define SSL_CONNECTION_GET_USER_SSL(sc) ((sc)->user_ssl)
 # ifndef OPENSSL_NO_QUIC
 #  include "quic/quic_local.h"
 #  define SSL_CONNECTION_FROM_SSL_int(ssl, c)                      \
@@ -1870,12 +1874,6 @@ typedef struct sigalg_lookup_st {
 
 /* Max MTU overhead we know about so far is 40 for IPv6 + 8 for UDP */
 # define DTLS1_MAX_MTU_OVERHEAD                   48
-
-/*
- * Flag used in message reuse to indicate the buffer contains the record
- * header as well as the handshake message header.
- */
-# define DTLS1_SKIP_RECORD_HEADER                 2
 
 struct dtls1_retransmit_state {
     const OSSL_RECORD_METHOD *wrlmethod;
@@ -2111,8 +2109,6 @@ typedef struct cert_st {
     CRYPTO_REF_COUNT references;             /* >1 only if SSL_copy_session_id is used */
 } CERT;
 
-# define FP_ICC  (int (*)(const void *,const void *))
-
 /*
  * This is for the SSLv3/TLSv1.0 differences in crypto/hash stuff It is a bit
  * of a mess of functions, but hell, think of it as an opaque structure :-)
@@ -2256,9 +2252,6 @@ typedef enum downgrade_en {
 
 #define SSL_USE_PSS(s) (s->s3.tmp.peer_sigalg != NULL && \
                         s->s3.tmp.peer_sigalg->sig == EVP_PKEY_RSA_PSS)
-
-/* A dummy signature value not valid for TLSv1.2 signature algs */
-#define TLSEXT_signature_rsa_pss                                0x0101
 
 /* TLSv1.3 downgrade protection sentinel values */
 extern const unsigned char tls11downgrade[8];
@@ -2488,7 +2481,8 @@ static ossl_inline void tls1_get_peer_groups(SSL_CONNECTION *s,
 
 __owur int ossl_ssl_init(SSL *ssl, SSL_CTX *ctx, const SSL_METHOD *method,
                          int type);
-__owur SSL *ossl_ssl_connection_new_int(SSL_CTX *ctx, const SSL_METHOD *method);
+__owur SSL *ossl_ssl_connection_new_int(SSL_CTX *ctx, SSL *user_ssl,
+                                        const SSL_METHOD *method);
 __owur SSL *ossl_ssl_connection_new(SSL_CTX *ctx);
 void ossl_ssl_connection_free(SSL *ssl);
 __owur int ossl_ssl_connection_reset(SSL *ssl);
@@ -2572,7 +2566,6 @@ __owur const SSL_CERT_LOOKUP *ssl_cert_lookup_by_idx(size_t idx, SSL_CTX *ctx);
 
 int ssl_undefined_function(SSL *s);
 __owur int ssl_undefined_void_function(void);
-__owur int ssl_undefined_const_function(const SSL *s);
 __owur int ssl_get_server_cert_serverinfo(SSL_CONNECTION *s,
                                           const unsigned char **serverinfo,
                                           size_t *serverinfo_length);
@@ -2945,8 +2938,6 @@ __owur int custom_exts_copy(custom_ext_methods *dst,
 __owur int custom_exts_copy_flags(custom_ext_methods *dst,
                                   const custom_ext_methods *src);
 void custom_exts_free(custom_ext_methods *exts);
-
-void ssl_comp_free_compression_methods_int(void);
 
 /* ssl_mcnf.c */
 int ssl_ctx_system_config(SSL_CTX *ctx);

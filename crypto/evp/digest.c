@@ -1,5 +1,5 @@
 /*
- * Copyright 1995-2023 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2024 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -395,6 +395,7 @@ int EVP_DigestUpdate(EVP_MD_CTX *ctx, const void *data, size_t count)
     if (ctx->pctx != NULL
             && EVP_PKEY_CTX_IS_SIGNATURE_OP(ctx->pctx)
             && ctx->pctx->op.sig.algctx != NULL) {
+#ifndef FIPS_MODULE
         /*
          * Prior to OpenSSL 3.0 EVP_DigestSignUpdate() and
          * EVP_DigestVerifyUpdate() were just macros for EVP_DigestUpdate().
@@ -407,6 +408,7 @@ int EVP_DigestUpdate(EVP_MD_CTX *ctx, const void *data, size_t count)
             return EVP_DigestSignUpdate(ctx, data, count);
         if (ctx->pctx->operation == EVP_PKEY_OP_VERIFYCTX)
             return EVP_DigestVerifyUpdate(ctx, data, count);
+#endif
         ERR_raise(ERR_LIB_EVP, EVP_R_UPDATE_ERROR);
         return 0;
     }
@@ -446,23 +448,12 @@ int EVP_DigestFinal_ex(EVP_MD_CTX *ctx, unsigned char *md, unsigned int *isize)
     if (ctx->digest == NULL)
         return 0;
 
-    sz = EVP_MD_get_size(ctx->digest);
+    sz = EVP_MD_CTX_get_size(ctx);
     if (sz < 0)
         return 0;
     mdsize = sz;
     if (ctx->digest->prov == NULL)
         goto legacy;
-
-    if (sz == 0) /* Assuming a xoflen must have been set. */
-        mdsize = SIZE_MAX;
-    if (ctx->digest->gettable_ctx_params != NULL) {
-        OSSL_PARAM params[] = { OSSL_PARAM_END, OSSL_PARAM_END };
-
-        params[0] = OSSL_PARAM_construct_size_t(OSSL_DIGEST_PARAM_SIZE,
-                                                &mdsize);
-        if (!EVP_MD_CTX_get_params(ctx, params))
-            return 0;
-    }
 
     if (ctx->digest->dfinal == NULL) {
         ERR_raise(ERR_LIB_EVP, EVP_R_FINAL_ERROR);
@@ -544,7 +535,7 @@ int EVP_DigestFinalXOF(EVP_MD_CTX *ctx, unsigned char *md, size_t size)
     return ret;
 
 legacy:
-    if (ctx->digest->flags & EVP_MD_FLAG_XOF
+    if (EVP_MD_xof(ctx->digest)
         && size <= INT_MAX
         && ctx->digest->md_ctrl(ctx, EVP_MD_CTRL_XOF_LEN, (int)size, NULL)) {
         ret = ctx->digest->final(ctx, md);
@@ -626,23 +617,35 @@ int EVP_MD_CTX_copy_ex(EVP_MD_CTX *out, const EVP_MD_CTX *in)
         return 0;
     }
 
-    evp_md_ctx_reset_ex(out, 1);
-    digest_change = (out->fetched_digest != in->fetched_digest);
-    if (digest_change && out->fetched_digest != NULL)
-        EVP_MD_free(out->fetched_digest);
-    *out = *in;
-    /* NULL out pointers in case of error */
-    out->pctx = NULL;
-    out->algctx = NULL;
+    if (out->digest == in->digest && in->digest->copyctx != NULL) {
 
-    if (digest_change && in->fetched_digest != NULL)
-        EVP_MD_up_ref(in->fetched_digest);
+        in->digest->copyctx(out->algctx, in->algctx);
 
-    if (in->algctx != NULL) {
-        out->algctx = in->digest->dupctx(in->algctx);
-        if (out->algctx == NULL) {
-            ERR_raise(ERR_LIB_EVP, EVP_R_NOT_ABLE_TO_COPY_CTX);
-            return 0;
+        EVP_PKEY_CTX_free(out->pctx);
+        out->pctx = NULL;
+        cleanup_old_md_data(out, 0);
+
+        out->flags = in->flags;
+        out->update = in->update;
+    } else {
+        evp_md_ctx_reset_ex(out, 1);
+        digest_change = (out->fetched_digest != in->fetched_digest);
+        if (digest_change && out->fetched_digest != NULL)
+            EVP_MD_free(out->fetched_digest);
+        *out = *in;
+        /* NULL out pointers in case of error */
+        out->pctx = NULL;
+        out->algctx = NULL;
+
+        if (digest_change && in->fetched_digest != NULL)
+            EVP_MD_up_ref(in->fetched_digest);
+
+        if (in->algctx != NULL) {
+            out->algctx = in->digest->dupctx(in->algctx);
+            if (out->algctx == NULL) {
+                ERR_raise(ERR_LIB_EVP, EVP_R_NOT_ABLE_TO_COPY_CTX);
+                return 0;
+            }
         }
     }
 
@@ -983,6 +986,11 @@ static int evp_md_cache_constants(EVP_MD *md)
     size_t mdsize = 0;
     OSSL_PARAM params[5];
 
+    /*
+     * Note that these parameters are 'constants' that are only set up
+     * during the EVP_MD_fetch(). For this reason the XOF functions set the
+     * md_size to 0, since the output size is unknown.
+     */
     params[0] = OSSL_PARAM_construct_size_t(OSSL_DIGEST_PARAM_BLOCK_SIZE, &blksz);
     params[1] = OSSL_PARAM_construct_size_t(OSSL_DIGEST_PARAM_SIZE, &mdsize);
     params[2] = OSSL_PARAM_construct_int(OSSL_DIGEST_PARAM_XOF, &xof);
@@ -1106,6 +1114,11 @@ static void *evp_md_from_algorithm(int name_id,
             if (md->gettable_ctx_params == NULL)
                 md->gettable_ctx_params =
                     OSSL_FUNC_digest_gettable_ctx_params(fns);
+            break;
+        case OSSL_FUNC_DIGEST_COPYCTX:
+            if (md->copyctx == NULL)
+                md->copyctx =
+                    OSSL_FUNC_digest_copyctx(fns);
             break;
         }
     }

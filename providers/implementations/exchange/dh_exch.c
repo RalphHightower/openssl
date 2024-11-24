@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2023 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2019-2024 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -25,7 +25,6 @@
 #include "prov/implementations.h"
 #include "prov/provider_ctx.h"
 #include "prov/securitycheck.h"
-#include "prov/fipsindicator.h"
 #include "crypto/dh.h"
 
 static OSSL_FUNC_keyexch_newctx_fn dh_newctx;
@@ -104,7 +103,7 @@ static int dh_check_key(PROV_DH_CTX *ctx)
     if (!key_approved) {
         if (!OSSL_FIPS_IND_ON_UNAPPROVED(ctx, OSSL_FIPS_IND_SETTABLE0,
                                          ctx->libctx, "DH Init", "DH Key",
-                                         ossl_securitycheck_enabled)) {
+                                         ossl_fips_config_securitycheck_enabled)) {
             ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_KEY_LENGTH);
             return 0;
         }
@@ -114,9 +113,9 @@ static int dh_check_key(PROV_DH_CTX *ctx)
 
 static int digest_check(PROV_DH_CTX *ctx, const EVP_MD *md)
 {
-    return ossl_fips_ind_digest_check(OSSL_FIPS_IND_GET(ctx),
-                                      OSSL_FIPS_IND_SETTABLE1, ctx->libctx,
-                                      md, "DH Set Ctx");
+    return ossl_fips_ind_digest_exch_check(OSSL_FIPS_IND_GET(ctx),
+                                           OSSL_FIPS_IND_SETTABLE1, ctx->libctx,
+                                           md, "DH Set Ctx");
 }
 #endif
 
@@ -348,7 +347,7 @@ static int dh_set_ctx_params(void *vpdhctx, const OSSL_PARAM params[])
 
     if (pdhctx == NULL)
         return 0;
-    if (params == NULL)
+    if (ossl_param_is_empty(params))
         return 1;
 
     if (!OSSL_FIPS_IND_SET_CTX_PARAM(pdhctx, OSSL_FIPS_IND_SETTABLE0, params,
@@ -393,7 +392,7 @@ static int dh_set_ctx_params(void *vpdhctx, const OSSL_PARAM params[])
         if (pdhctx->kdf_md == NULL)
             return 0;
         /* XOF digests are not allowed */
-        if ((EVP_MD_get_flags(pdhctx->kdf_md) & EVP_MD_FLAG_XOF) != 0) {
+        if (EVP_MD_xof(pdhctx->kdf_md)) {
             ERR_raise(ERR_LIB_PROV, PROV_R_XOF_DIGESTS_NOT_ALLOWED);
             return 0;
         }

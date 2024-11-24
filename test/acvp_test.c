@@ -51,6 +51,9 @@ static int rsa_sign_x931_pad_allowed = 1;
 #ifndef OPENSSL_NO_DSA
 static int dsasign_allowed = 1;
 #endif
+#ifndef OPENSSL_NO_EC
+static int ec_cofactors = 1;
+#endif
 
 const OPTIONS *test_get_options(void)
 {
@@ -343,6 +346,68 @@ err:
     return ret;
 
 }
+
+static int ecdh_cofactor_derive_test(int tstid)
+{
+    int ret = 0;
+    const struct ecdh_cofactor_derive_st *t = &ecdh_cofactor_derive_data[tstid];
+    unsigned char secret1[16];
+    size_t secret1_len = sizeof(secret1);
+    const char *curve = "K-283"; /* A curve that has a cofactor that it not 1 */
+    EVP_PKEY *peer1 = NULL, *peer2 = NULL;
+    EVP_PKEY_CTX *p1ctx = NULL;
+    OSSL_PARAM params[2], *prms = NULL;
+    int use_cofactordh = t->key_cofactor;
+    int cofactor_mode = t->derive_cofactor_mode;
+
+    if (!ec_cofactors)
+        return TEST_skip("not supported by FIPS provider version");
+
+    if (!TEST_ptr(peer1 = EVP_PKEY_Q_keygen(libctx, NULL, "EC", curve)))
+        return TEST_skip("Curve %s not supported by the FIPS provider", curve);
+
+    if (!TEST_ptr(peer2 = EVP_PKEY_Q_keygen(libctx, NULL, "EC", curve)))
+        goto err;
+
+    params[1] = OSSL_PARAM_construct_end();
+
+    prms = NULL;
+    if (t->key_cofactor != COFACTOR_NOT_SET) {
+        params[0] = OSSL_PARAM_construct_int(OSSL_PKEY_PARAM_USE_COFACTOR_ECDH,
+                                             &use_cofactordh);
+        prms = params;
+    }
+    if (!TEST_int_eq(EVP_PKEY_set_params(peer1, prms), 1)
+            || !TEST_ptr(p1ctx = EVP_PKEY_CTX_new_from_pkey(libctx, peer1, NULL)))
+        goto err;
+
+    prms = NULL;
+    if (t->derive_cofactor_mode != COFACTOR_NOT_SET) {
+        params[0] = OSSL_PARAM_construct_int(OSSL_EXCHANGE_PARAM_EC_ECDH_COFACTOR_MODE,
+                                             &cofactor_mode);
+        prms = params;
+    }
+    if (!TEST_int_eq(EVP_PKEY_derive_init_ex(p1ctx, prms), 1)
+            || !TEST_int_eq(EVP_PKEY_derive_set_peer(p1ctx, peer2), 1)
+            || !TEST_int_eq(EVP_PKEY_derive(p1ctx, secret1, &secret1_len),
+                            t->expected))
+        goto err;
+
+    ret = 1;
+err:
+    if (ret == 0) {
+        static const char *state[] = { "unset", "-1", "disabled", "enabled" };
+
+        TEST_note("ECDH derive() was expected to %s if key cofactor is"
+                  "%s and derive mode is %s", t->expected ? "Pass" : "Fail",
+                  state[2 + t->key_cofactor], state[2 + t->derive_cofactor_mode]);
+    }
+    EVP_PKEY_free(peer1);
+    EVP_PKEY_free(peer2);
+    EVP_PKEY_CTX_free(p1ctx);
+    return ret;
+}
+
 #endif /* OPENSSL_NO_EC */
 
 #if !defined(OPENSSL_NO_DSA) || !defined(OPENSSL_NO_ECX)
@@ -494,10 +559,8 @@ static int dsa_keygen_test(int id)
     size_t priv_len = 0, pub_len = 0;
     const struct dsa_paramgen_st *tst = &dsa_keygen_data[id];
 
-    if (!dsasign_allowed) {
-        TEST_info("DSA keygen test skipped: DSA signing is not allowed");
-        return 1;
-    }
+    if (!dsasign_allowed)
+        return TEST_skip("DSA signing is not allowed");
     if (!TEST_ptr(param_key = dsa_paramgen(tst->L, tst->N))
         || !TEST_ptr(keygen_ctx = EVP_PKEY_CTX_new_from_pkey(libctx, param_key,
                                                              NULL))
@@ -1347,10 +1410,8 @@ static int rsa_siggen_test(int id)
     int salt_len = tst->pss_salt_len;
 
     if (!rsa_sign_x931_pad_allowed
-            && (strcmp(tst->sig_pad_mode, OSSL_PKEY_RSA_PAD_MODE_X931) == 0)) {
-        TEST_info("RSA x931 signature generation skipped: x931 signing is not allowed");
-        return 1;
-    }
+            && (strcmp(tst->sig_pad_mode, OSSL_PKEY_RSA_PAD_MODE_X931) == 0))
+        return TEST_skip("x931 signing is not allowed");
 
     TEST_note("RSA %s signature generation", tst->sig_pad_mode);
 
@@ -1443,7 +1504,7 @@ static int rsa_decryption_primitive_test(int id)
     BN_CTX *bn_ctx = NULL;
     const struct rsa_decrypt_prim_st *tst  = &rsa_decrypt_prim_data[id];
 
-    if (!TEST_ptr(pkey = EVP_PKEY_Q_keygen(libctx, NULL, "RSA", 2048))
+    if (!TEST_ptr(pkey = EVP_PKEY_Q_keygen(libctx, NULL, "RSA", (size_t)2048))
         || !TEST_true(pkey_get_bn_bytes(pkey, OSSL_PKEY_PARAM_RSA_N, &n, &n_len))
         || !TEST_true(pkey_get_bn_bytes(pkey, OSSL_PKEY_PARAM_RSA_E, &e, &e_len))
         || !TEST_ptr(ctx = EVP_PKEY_CTX_new_from_pkey(libctx, pkey, ""))
@@ -1684,10 +1745,13 @@ int setup_tests(void)
 #endif /* OPENSSL_NO_DSA */
 
 #ifndef OPENSSL_NO_EC
+    ec_cofactors = fips_provider_version_ge(libctx, 3, 4, 0);
     ADD_ALL_TESTS(ecdsa_keygen_test, OSSL_NELEM(ecdsa_keygen_data));
     ADD_ALL_TESTS(ecdsa_pub_verify_test, OSSL_NELEM(ecdsa_pv_data));
     ADD_ALL_TESTS(ecdsa_siggen_test, OSSL_NELEM(ecdsa_siggen_data));
     ADD_ALL_TESTS(ecdsa_sigver_test, OSSL_NELEM(ecdsa_sigver_data));
+    ADD_ALL_TESTS(ecdh_cofactor_derive_test,
+                  OSSL_NELEM(ecdh_cofactor_derive_data));
 #endif /* OPENSSL_NO_EC */
 
 #ifndef OPENSSL_NO_ECX

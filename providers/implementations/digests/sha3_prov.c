@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2023 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2019-2024 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -33,8 +33,11 @@ static OSSL_FUNC_digest_init_fn keccak_init_params;
 static OSSL_FUNC_digest_update_fn keccak_update;
 static OSSL_FUNC_digest_final_fn keccak_final;
 static OSSL_FUNC_digest_freectx_fn keccak_freectx;
+static OSSL_FUNC_digest_copyctx_fn keccak_copyctx;
 static OSSL_FUNC_digest_dupctx_fn keccak_dupctx;
 static OSSL_FUNC_digest_squeeze_fn shake_squeeze;
+static OSSL_FUNC_digest_get_ctx_params_fn shake_get_ctx_params;
+static OSSL_FUNC_digest_gettable_ctx_params_fn shake_gettable_ctx_params;
 static OSSL_FUNC_digest_set_ctx_params_fn shake_set_ctx_params;
 static OSSL_FUNC_digest_settable_ctx_params_fn shake_settable_ctx_params;
 static sha3_absorb_fn generic_sha3_absorb;
@@ -191,26 +194,34 @@ static size_t s390x_sha3_absorb(void *vctx, const void *inp, size_t len)
 {
     KECCAK1600_CTX *ctx = vctx;
     size_t rem = len % ctx->block_size;
+    unsigned int fc;
 
     if (!(ctx->xof_state == XOF_STATE_INIT ||
           ctx->xof_state == XOF_STATE_ABSORB))
         return 0;
-    ctx->xof_state = XOF_STATE_ABSORB;
-    s390x_kimd(inp, len - rem, ctx->pad, ctx->A);
+    if (len - rem > 0) {
+        fc = ctx->pad;
+        fc |= ctx->xof_state == XOF_STATE_INIT ? S390X_KIMD_NIP : 0;
+        ctx->xof_state = XOF_STATE_ABSORB;
+        s390x_kimd(inp, len - rem, fc, ctx->A);
+    }
     return rem;
 }
 
 static int s390x_sha3_final(void *vctx, unsigned char *out, size_t outlen)
 {
     KECCAK1600_CTX *ctx = vctx;
+    unsigned int fc;
 
     if (!ossl_prov_is_running())
         return 0;
     if (!(ctx->xof_state == XOF_STATE_INIT ||
           ctx->xof_state == XOF_STATE_ABSORB))
         return 0;
+    fc = ctx->pad | S390X_KLMD_DUFOP;
+    fc |= ctx->xof_state == XOF_STATE_INIT ? S390X_KLMD_NIP : 0;
     ctx->xof_state = XOF_STATE_FINAL;
-    s390x_klmd(ctx->buf, ctx->bufsz, NULL, 0, ctx->pad, ctx->A);
+    s390x_klmd(ctx->buf, ctx->bufsz, NULL, 0, fc, ctx->A);
     memcpy(out, ctx->A, outlen);
     return 1;
 }
@@ -218,20 +229,24 @@ static int s390x_sha3_final(void *vctx, unsigned char *out, size_t outlen)
 static int s390x_shake_final(void *vctx, unsigned char *out, size_t outlen)
 {
     KECCAK1600_CTX *ctx = vctx;
+    unsigned int fc;
 
     if (!ossl_prov_is_running())
         return 0;
     if (!(ctx->xof_state == XOF_STATE_INIT ||
           ctx->xof_state == XOF_STATE_ABSORB))
         return 0;
+    fc = ctx->pad | S390X_KLMD_DUFOP;
+    fc |= ctx->xof_state == XOF_STATE_INIT ? S390X_KLMD_NIP : 0;
     ctx->xof_state = XOF_STATE_FINAL;
-    s390x_klmd(ctx->buf, ctx->bufsz, out, outlen, ctx->pad, ctx->A);
+    s390x_klmd(ctx->buf, ctx->bufsz, out, outlen, fc, ctx->A);
     return 1;
 }
 
 static int s390x_shake_squeeze(void *vctx, unsigned char *out, size_t outlen)
 {
     KECCAK1600_CTX *ctx = vctx;
+    unsigned int fc;
     size_t len;
 
     if (!ossl_prov_is_running())
@@ -242,8 +257,10 @@ static int s390x_shake_squeeze(void *vctx, unsigned char *out, size_t outlen)
      * On the first squeeze call, finish the absorb process (incl. padding).
      */
     if (ctx->xof_state != XOF_STATE_SQUEEZE) {
+        fc = ctx->pad;
+        fc |= ctx->xof_state == XOF_STATE_INIT ? S390X_KLMD_NIP : 0;
         ctx->xof_state = XOF_STATE_SQUEEZE;
-        s390x_klmd(ctx->buf, ctx->bufsz, out, outlen, ctx->pad, ctx->A);
+        s390x_klmd(ctx->buf, ctx->bufsz, out, outlen, fc, ctx->A);
         ctx->bufsz = outlen % ctx->block_size;
         /* reuse ctx->bufsz to count bytes squeezed from current sponge */
         return 1;
@@ -275,24 +292,28 @@ static int s390x_keccakc_final(void *vctx, unsigned char *out, size_t outlen,
     size_t bsz = ctx->block_size;
     size_t num = ctx->bufsz;
     size_t needed = outlen;
+    unsigned int fc;
 
     if (!ossl_prov_is_running())
         return 0;
     if (!(ctx->xof_state == XOF_STATE_INIT ||
           ctx->xof_state == XOF_STATE_ABSORB))
         return 0;
+    fc = ctx->pad;
+    fc |= ctx->xof_state == XOF_STATE_INIT ? S390X_KIMD_NIP : 0;
     ctx->xof_state = XOF_STATE_FINAL;
     if (outlen == 0)
         return 1;
     memset(ctx->buf + num, 0, bsz - num);
     ctx->buf[num] = padding;
     ctx->buf[bsz - 1] |= 0x80;
-    s390x_kimd(ctx->buf, bsz, ctx->pad, ctx->A);
+    s390x_kimd(ctx->buf, bsz, fc, ctx->A);
     num = needed > bsz ? bsz : needed;
     memcpy(out, ctx->A, num);
     needed -= num;
     if (needed > 0)
-        s390x_klmd(NULL, 0, out + bsz, needed, ctx->pad | S390X_KLMD_PS, ctx->A);
+        s390x_klmd(NULL, 0, out + bsz, needed,
+                   ctx->pad | S390X_KLMD_PS | S390X_KLMD_DUFOP, ctx->A);
 
     return 1;
 }
@@ -312,6 +333,7 @@ static int s390x_keccakc_squeeze(void *vctx, unsigned char *out, size_t outlen,
 {
     KECCAK1600_CTX *ctx = vctx;
     size_t len;
+    unsigned int fc;
 
     if (!ossl_prov_is_running())
         return 0;
@@ -327,7 +349,9 @@ static int s390x_keccakc_squeeze(void *vctx, unsigned char *out, size_t outlen,
         memset(ctx->buf + ctx->bufsz, 0, len);
         ctx->buf[ctx->bufsz] = padding;
         ctx->buf[ctx->block_size - 1] |= 0x80;
-        s390x_kimd(ctx->buf, ctx->block_size, ctx->pad, ctx->A);
+        fc = ctx->pad;
+        fc |= ctx->xof_state == XOF_STATE_INIT ? S390X_KIMD_NIP : 0;
+        s390x_kimd(ctx->buf, ctx->block_size, fc, ctx->A);
         ctx->bufsz = 0;
         /* reuse ctx->bufsz to count bytes squeezed from current sponge */
     }
@@ -511,6 +535,7 @@ const OSSL_DISPATCH ossl_##name##_functions[] = {                              \
     { OSSL_FUNC_DIGEST_FINAL, (void (*)(void))keccak_final },                  \
     { OSSL_FUNC_DIGEST_FREECTX, (void (*)(void))keccak_freectx },              \
     { OSSL_FUNC_DIGEST_DUPCTX, (void (*)(void))keccak_dupctx },                \
+    { OSSL_FUNC_DIGEST_COPYCTX, (void (*)(void))keccak_copyctx },              \
     PROV_DISPATCH_FUNC_DIGEST_GET_PARAMS(name)
 
 #define PROV_FUNC_SHA3_DIGEST(name, bitlen, blksize, dgstsize, flags)          \
@@ -525,6 +550,9 @@ const OSSL_DISPATCH ossl_##name##_functions[] = {                              \
     { OSSL_FUNC_DIGEST_SET_CTX_PARAMS, (void (*)(void))shake_set_ctx_params }, \
     { OSSL_FUNC_DIGEST_SETTABLE_CTX_PARAMS,                                    \
      (void (*)(void))shake_settable_ctx_params },                              \
+    { OSSL_FUNC_DIGEST_GET_CTX_PARAMS, (void (*)(void))shake_get_ctx_params }, \
+    { OSSL_FUNC_DIGEST_GETTABLE_CTX_PARAMS,                                    \
+     (void (*)(void))shake_gettable_ctx_params },                              \
     PROV_DISPATCH_FUNC_DIGEST_CONSTRUCT_END
 
 static void keccak_freectx(void *vctx)
@@ -532,6 +560,14 @@ static void keccak_freectx(void *vctx)
     KECCAK1600_CTX *ctx = (KECCAK1600_CTX *)vctx;
 
     OPENSSL_clear_free(ctx,  sizeof(*ctx));
+}
+
+static void keccak_copyctx(void *voutctx, void *vinctx)
+{
+    KECCAK1600_CTX *outctx = (KECCAK1600_CTX *)voutctx;
+    KECCAK1600_CTX *inctx = (KECCAK1600_CTX *)vinctx;
+
+    *outctx = *inctx;
 }
 
 static void *keccak_dupctx(void *ctx)
@@ -545,13 +581,50 @@ static void *keccak_dupctx(void *ctx)
     return ret;
 }
 
-static const OSSL_PARAM known_shake_settable_ctx_params[] = {
-    {OSSL_DIGEST_PARAM_XOFLEN, OSSL_PARAM_UNSIGNED_INTEGER, NULL, 0, 0},
-    OSSL_PARAM_END
-};
+static const OSSL_PARAM *shake_gettable_ctx_params(ossl_unused void *ctx,
+                                                   ossl_unused void *provctx)
+{
+    static const OSSL_PARAM known_shake_gettable_ctx_params[] = {
+        {OSSL_DIGEST_PARAM_XOFLEN, OSSL_PARAM_UNSIGNED_INTEGER, NULL, 0, 0},
+        {OSSL_DIGEST_PARAM_SIZE, OSSL_PARAM_UNSIGNED_INTEGER, NULL, 0, 0},
+        OSSL_PARAM_END
+    };
+    return known_shake_gettable_ctx_params;
+}
+
+static int shake_get_ctx_params(void *vctx, OSSL_PARAM params[])
+{
+    OSSL_PARAM *p;
+    KECCAK1600_CTX *ctx = (KECCAK1600_CTX *)vctx;
+
+    if (ctx == NULL)
+        return 0;
+    if (ossl_param_is_empty(params))
+        return 1;
+
+    p = OSSL_PARAM_locate(params, OSSL_DIGEST_PARAM_XOFLEN);
+    if (p != NULL && !OSSL_PARAM_set_size_t(p, ctx->md_size)) {
+        ERR_raise(ERR_LIB_PROV, PROV_R_FAILED_TO_GET_PARAMETER);
+        return 0;
+    }
+    /* Size is an alias of xoflen */
+    p = OSSL_PARAM_locate(params, OSSL_DIGEST_PARAM_SIZE);
+    if (p != NULL && !OSSL_PARAM_set_size_t(p, ctx->md_size)) {
+        ERR_raise(ERR_LIB_PROV, PROV_R_FAILED_TO_GET_PARAMETER);
+        return 0;
+    }
+    return 1;
+}
+
 static const OSSL_PARAM *shake_settable_ctx_params(ossl_unused void *ctx,
                                                    ossl_unused void *provctx)
 {
+    static const OSSL_PARAM known_shake_settable_ctx_params[] = {
+        {OSSL_DIGEST_PARAM_XOFLEN, OSSL_PARAM_UNSIGNED_INTEGER, NULL, 0, 0},
+        {OSSL_DIGEST_PARAM_SIZE, OSSL_PARAM_UNSIGNED_INTEGER, NULL, 0, 0},
+        OSSL_PARAM_END
+    };
+
     return known_shake_settable_ctx_params;
 }
 
@@ -562,10 +635,13 @@ static int shake_set_ctx_params(void *vctx, const OSSL_PARAM params[])
 
     if (ctx == NULL)
         return 0;
-    if (params == NULL)
+    if (ossl_param_is_empty(params))
         return 1;
 
     p = OSSL_PARAM_locate_const(params, OSSL_DIGEST_PARAM_XOFLEN);
+    if (p == NULL)
+        p = OSSL_PARAM_locate_const(params, OSSL_DIGEST_PARAM_SIZE);
+
     if (p != NULL && !OSSL_PARAM_get_size_t(p, &ctx->md_size)) {
         ERR_raise(ERR_LIB_PROV, PROV_R_FAILED_TO_GET_PARAMETER);
         return 0;
@@ -589,8 +665,8 @@ static int shake_set_ctx_params(void *vctx, const OSSL_PARAM params[])
     SHAKE_newctx(shake, SHAKE_##bitlen, shake_##bitlen, bitlen,                \
                  0 /* no default md length */, '\x1f')                         \
     PROV_FUNC_SHAKE_DIGEST(shake_##bitlen, bitlen,                             \
-                          SHA3_BLOCKSIZE(bitlen), 0,                           \
-                          SHAKE_FLAGS)
+                           SHA3_BLOCKSIZE(bitlen), 0,                          \
+                           SHAKE_FLAGS)
 
 #define IMPLEMENT_KMAC_functions(bitlen)                                       \
     KMAC_newctx(keccak_kmac_##bitlen, bitlen, '\x04')                          \

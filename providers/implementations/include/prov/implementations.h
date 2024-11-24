@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2023 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2019-2024 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -296,6 +296,7 @@ extern const OSSL_DISPATCH ossl_kdf_argon2id_functions[];
 extern const OSSL_DISPATCH ossl_test_rng_functions[];
 extern const OSSL_DISPATCH ossl_seed_src_functions[];
 extern const OSSL_DISPATCH ossl_jitter_functions[];
+extern const OSSL_DISPATCH ossl_crng_test_functions[];
 extern const OSSL_DISPATCH ossl_drbg_hash_functions[];
 extern const OSSL_DISPATCH ossl_drbg_ossl_hmac_functions[];
 extern const OSSL_DISPATCH ossl_drbg_ctr_functions[];
@@ -332,6 +333,15 @@ extern const OSSL_DISPATCH ossl_kdf_scrypt_keyexch_functions[];
 
 /* Signature */
 extern const OSSL_DISPATCH ossl_dsa_signature_functions[];
+extern const OSSL_DISPATCH ossl_dsa_sha1_signature_functions[];
+extern const OSSL_DISPATCH ossl_dsa_sha224_signature_functions[];
+extern const OSSL_DISPATCH ossl_dsa_sha256_signature_functions[];
+extern const OSSL_DISPATCH ossl_dsa_sha384_signature_functions[];
+extern const OSSL_DISPATCH ossl_dsa_sha512_signature_functions[];
+extern const OSSL_DISPATCH ossl_dsa_sha3_224_signature_functions[];
+extern const OSSL_DISPATCH ossl_dsa_sha3_256_signature_functions[];
+extern const OSSL_DISPATCH ossl_dsa_sha3_384_signature_functions[];
+extern const OSSL_DISPATCH ossl_dsa_sha3_512_signature_functions[];
 extern const OSSL_DISPATCH ossl_rsa_signature_functions[];
 #ifndef OPENSSL_NO_MD5
 extern const OSSL_DISPATCH ossl_rsa_md5_signature_functions[];
@@ -354,8 +364,20 @@ extern const OSSL_DISPATCH ossl_rsa_sha3_512_signature_functions[];
 extern const OSSL_DISPATCH ossl_rsa_sm3_signature_functions[];
 #endif
 extern const OSSL_DISPATCH ossl_ed25519_signature_functions[];
+extern const OSSL_DISPATCH ossl_ed25519ph_signature_functions[];
+extern const OSSL_DISPATCH ossl_ed25519ctx_signature_functions[];
 extern const OSSL_DISPATCH ossl_ed448_signature_functions[];
+extern const OSSL_DISPATCH ossl_ed448ph_signature_functions[];
 extern const OSSL_DISPATCH ossl_ecdsa_signature_functions[];
+extern const OSSL_DISPATCH ossl_ecdsa_sha1_signature_functions[];
+extern const OSSL_DISPATCH ossl_ecdsa_sha224_signature_functions[];
+extern const OSSL_DISPATCH ossl_ecdsa_sha256_signature_functions[];
+extern const OSSL_DISPATCH ossl_ecdsa_sha384_signature_functions[];
+extern const OSSL_DISPATCH ossl_ecdsa_sha512_signature_functions[];
+extern const OSSL_DISPATCH ossl_ecdsa_sha3_224_signature_functions[];
+extern const OSSL_DISPATCH ossl_ecdsa_sha3_256_signature_functions[];
+extern const OSSL_DISPATCH ossl_ecdsa_sha3_384_signature_functions[];
+extern const OSSL_DISPATCH ossl_ecdsa_sha3_512_signature_functions[];
 extern const OSSL_DISPATCH ossl_mac_legacy_hmac_signature_functions[];
 extern const OSSL_DISPATCH ossl_mac_legacy_siphash_signature_functions[];
 extern const OSSL_DISPATCH ossl_mac_legacy_poly1305_signature_functions[];

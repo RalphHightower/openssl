@@ -39,7 +39,7 @@ X509_CRL_set1_nextUpdate - get or set certificate or CRL dates
 X509_get0_notBefore() and X509_get0_notAfter() return the B<notBefore>
 and B<notAfter> fields of certificate I<x> respectively. The value
 returned is an internal pointer which must not be freed up after
-the call.
+the call. I<x> B<MUST NOT> be NULL.
 
 X509_getm_notBefore() and X509_getm_notAfter() are similar to
 X509_get0_notBefore() and X509_get0_notAfter() except they return
@@ -120,7 +120,7 @@ X509_get_notBefore() and X509_get_notAfter() were deprecated in OpenSSL
 
 =head1 COPYRIGHT
 
-Copyright 2016-2023 The OpenSSL Project Authors. All Rights Reserved.
+Copyright 2016-2024 The OpenSSL Project Authors. All Rights Reserved.
 
 Licensed under the Apache License 2.0 (the "License").  You may not use
 this file except in compliance with the License.  You can obtain a copy

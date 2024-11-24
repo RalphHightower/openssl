@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2023 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2018-2024 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -28,8 +28,7 @@
 #include "prov/providercommon.h"
 #include "prov/implementations.h"
 #include "prov/provider_util.h"
-#include "prov/fipscommon.h"
-#include "prov/fipsindicator.h"
+#include "prov/securitycheck.h"
 #include "pbkdf2.h"
 
 /* Constants specified in SP800-132 */
@@ -217,7 +216,7 @@ static int fips_lower_bound_check_passed(KDF_PBKDF2 *ctx, size_t keylen)
     if (!approved) {
         if (!OSSL_FIPS_IND_ON_UNAPPROVED(ctx, OSSL_FIPS_IND_SETTABLE0, libctx,
                                          "PBKDF2", desc,
-                                         FIPS_pbkdf2_lower_bound_check)) {
+                                         ossl_fips_config_pbkdf2_lower_bound_check)) {
             ERR_raise(ERR_LIB_PROV, error);
             return 0;
         }
@@ -260,14 +259,14 @@ static int kdf_pbkdf2_set_ctx_params(void *vctx, const OSSL_PARAM params[])
     uint64_t iter, min_iter;
     const EVP_MD *md;
 
-    if (params == NULL)
+    if (ossl_param_is_empty(params))
         return 1;
 
     if (OSSL_PARAM_locate_const(params, OSSL_ALG_PARAM_DIGEST) != NULL) {
         if (!ossl_prov_digest_load_from_params(&ctx->digest, params, provctx))
             return 0;
         md = ossl_prov_digest_md(&ctx->digest);
-        if ((EVP_MD_get_flags(md) & EVP_MD_FLAG_XOF) != 0) {
+        if (EVP_MD_xof(md)) {
             ERR_raise(ERR_LIB_PROV, PROV_R_XOF_DIGESTS_NOT_ALLOWED);
             return 0;
         }

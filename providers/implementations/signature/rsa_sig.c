@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2023 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2019-2024 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -32,7 +32,6 @@
 #include "prov/provider_ctx.h"
 #include "prov/der_rsa.h"
 #include "prov/securitycheck.h"
-#include "prov/fipsindicator.h"
 
 #define RSA_DEFAULT_DIGEST_NAME OSSL_DIGEST_NAME_SHA1
 
@@ -388,7 +387,7 @@ static int rsa_setup_md(PROV_RSA_CTX *ctx, const char *mdname,
             goto err;
         }
         md_nid = ossl_digest_rsa_sign_get_md_nid(md);
-        if (md_nid <= 0) {
+        if (md_nid == NID_undef) {
             ERR_raise_data(ERR_LIB_PROV, PROV_R_DIGEST_NOT_ALLOWED,
                            "digest=%s", mdname);
             goto err;
@@ -398,7 +397,7 @@ static int rsa_setup_md(PROV_RSA_CTX *ctx, const char *mdname,
          * We don't support XOF digests with RSA PSS (yet), so just fail.
          * When we do support them, uncomment the second clause.
          */
-        if ((EVP_MD_get_flags(md) & EVP_MD_FLAG_XOF) != 0
+        if (EVP_MD_xof(md)
                 /* && ctx->pad_mode != RSA_PKCS1_PSS_PADDING */) {
             ERR_raise(ERR_LIB_PROV, PROV_R_XOF_DIGESTS_NOT_ALLOWED);
             goto err;
@@ -413,7 +412,7 @@ static int rsa_setup_md(PROV_RSA_CTX *ctx, const char *mdname,
                                                  OSSL_FIPS_IND_SETTABLE1,
                                                  ctx->libctx,
                                                  md_nid, sha1_allowed, desc,
-                                                 &FIPS_fips_signature_digest_check))
+                                                 ossl_fips_config_signature_digest_check))
                 goto err;
         }
 #endif
@@ -646,7 +645,7 @@ static int rsa_pss_saltlen_check_passed(PROV_RSA_CTX *ctx, const char *algoname,
         if (!OSSL_FIPS_IND_ON_UNAPPROVED(ctx, OSSL_FIPS_IND_SETTABLE3,
                                          ctx->libctx,
                                          algoname, "PSS Salt Length",
-                                         FIPS_rsa_pss_saltlen_check)) {
+                                         ossl_fips_config_rsa_pss_saltlen_check)) {
             ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_SALT_LENGTH);
             return 0;
         }
@@ -1520,7 +1519,7 @@ static int rsa_x931_padding_allowed(PROV_RSA_CTX *ctx)
         if (!OSSL_FIPS_IND_ON_UNAPPROVED(ctx, OSSL_FIPS_IND_SETTABLE2,
                                          ctx->libctx,
                                          "RSA Sign set ctx", "X931 Padding",
-                                         FIPS_rsa_sign_x931_disallowed)) {
+                                         ossl_fips_config_rsa_sign_x931_disallowed)) {
             ERR_raise(ERR_LIB_PROV,
                       PROV_R_ILLEGAL_OR_UNSUPPORTED_PADDING_MODE);
             return 0;
@@ -1543,7 +1542,7 @@ static int rsa_set_ctx_params(void *vprsactx, const OSSL_PARAM params[])
 
     if (prsactx == NULL)
         return 0;
-    if (params == NULL)
+    if (ossl_param_is_empty(params))
         return 1;
 
     if (!OSSL_FIPS_IND_SET_CTX_PARAM(prsactx, OSSL_FIPS_IND_SETTABLE0, params,
@@ -1991,7 +1990,7 @@ static int rsa_sigalg_set_ctx_params(void *vprsactx, const OSSL_PARAM params[])
 
     if (prsactx == NULL)
         return 0;
-    if (params == NULL)
+    if (ossl_param_is_empty(params))
         return 1;
 
     if (prsactx->operation == EVP_PKEY_OP_VERIFYMSG) {
@@ -2004,11 +2003,8 @@ static int rsa_sigalg_set_ctx_params(void *vprsactx, const OSSL_PARAM params[])
                                              0, &prsactx->siglen))
                 return 0;
         }
-        return 1;
     }
-
-    /* Wrong operation */
-    return 0;
+    return 1;
 }
 
 #define IMPL_RSA_SIGALG(md, MD)                                         \

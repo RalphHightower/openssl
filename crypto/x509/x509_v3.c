@@ -1,5 +1,5 @@
 /*
- * Copyright 1995-2020 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2024 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -142,9 +142,9 @@ STACK_OF(X509_EXTENSION) *X509v3_add_ext(STACK_OF(X509_EXTENSION) **x,
     return NULL;
 }
 
-STACK_OF(X509_EXTENSION)
-     *X509v3_add_extensions(STACK_OF(X509_EXTENSION) **target,
-                            const STACK_OF(X509_EXTENSION) *exts)
+/* This returns NULL also in non-error case *target == NULL && sk_X509_EXTENSION_num(exts) <= 0 */
+STACK_OF(X509_EXTENSION) *X509v3_add_extensions(STACK_OF(X509_EXTENSION) **target,
+                                                const STACK_OF(X509_EXTENSION) *exts)
 {
     int i;
 

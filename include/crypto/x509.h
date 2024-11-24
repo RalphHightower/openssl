@@ -303,10 +303,8 @@ struct x509_object_st {
     /* one of the above types */
     X509_LOOKUP_TYPE type;
     union {
-        char *ptr;
         X509 *x509;
         X509_CRL *crl;
-        EVP_PKEY *pkey;
     } data;
 };
 
@@ -393,5 +391,8 @@ int ossl_print_attribute_value(BIO *out,
                                int obj_nid,
                                const ASN1_TYPE *av,
                                int indent);
+
+int ossl_serial_number_print(BIO *out, const ASN1_INTEGER *bs, int indent);
+int ossl_bio_print_hex(BIO *out, unsigned char *buf, int len);
 
 #endif  /* OSSL_CRYPTO_X509_H */

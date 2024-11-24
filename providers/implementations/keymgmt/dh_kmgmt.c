@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2023 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2019-2024 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -531,7 +531,7 @@ static int dh_gen_common_set_params(void *genctx, const OSSL_PARAM params[])
 
     if (gctx == NULL)
         return 0;
-    if (params == NULL)
+    if (ossl_param_is_empty(params))
         return 1;
 
     p = OSSL_PARAM_locate_const(params, OSSL_PKEY_PARAM_FFC_TYPE);

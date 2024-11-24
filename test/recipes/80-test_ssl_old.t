@@ -1,5 +1,5 @@
 #! /usr/bin/env perl
-# Copyright 2015-2022 The OpenSSL Project Authors. All Rights Reserved.
+# Copyright 2015-2024 The OpenSSL Project Authors. All Rights Reserved.
 #
 # Licensed under the Apache License 2.0 (the "License").  You may not use
 # this file except in compliance with the License.  You can obtain a copy
@@ -161,7 +161,7 @@ unless ($no_fips) {
     my $fipsmodcfgnew = result_file($fipsmodcfgnew_filename);
     $ENV{OPENSSL_CONF_INCLUDE} = result_dir();
     ok(replace_kv_file($fipsmodcfg,
-                       'rsa-pkcs15-padding-disabled', '0',
+                       'rsa-pkcs15-pad-disabled', '0',
                        $fipsmodcfgnew)
        && replace_line_file($provconf,
                             $fipsmodcfg_filename, $fipsmodcfgnew_filename,

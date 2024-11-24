@@ -1,5 +1,5 @@
 /*
- * Copyright 1995-2023 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2024 The OpenSSL Project Authors. All Rights Reserved.
  * Copyright (c) 2002, Oracle and/or its affiliates. All rights reserved
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
@@ -7,6 +7,8 @@
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
  */
+
+#include "internal/e_os.h"
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -746,6 +748,10 @@ STACK_OF(X509_NAME) *SSL_load_client_CA_file_ex(const char *file,
     LHASH_OF(X509_NAME) *name_hash = lh_X509_NAME_new(xname_hash, xname_cmp);
     OSSL_LIB_CTX *prev_libctx = NULL;
 
+    if (file == NULL) {
+        ERR_raise(ERR_LIB_SSL, ERR_R_PASSED_NULL_PARAMETER);
+        goto err;
+    }
     if (name_hash == NULL) {
         ERR_raise(ERR_LIB_SSL, ERR_R_CRYPTO_LIB);
         goto err;
@@ -871,6 +877,11 @@ int SSL_add_file_cert_subjects_to_stack(STACK_OF(X509_NAME) *stack,
     int idx = 0;
     int num = 0;
     LHASH_OF(X509_NAME) *name_hash = lh_X509_NAME_new(xname_hash, xname_cmp);
+
+    if (file == NULL) {
+        ERR_raise(ERR_LIB_SSL, ERR_R_PASSED_NULL_PARAMETER);
+        goto err;
+    }
 
     if (name_hash == NULL) {
         ERR_raise(ERR_LIB_SSL, ERR_R_CRYPTO_LIB);
@@ -1267,7 +1278,7 @@ static int ssl_security_default_callback(const SSL *s, const SSL_CTX *ctx,
 
 int ssl_security(const SSL_CONNECTION *s, int op, int bits, int nid, void *other)
 {
-    return s->cert->sec_cb(SSL_CONNECTION_GET_SSL(s), NULL, op, bits, nid,
+    return s->cert->sec_cb(SSL_CONNECTION_GET_USER_SSL(s), NULL, op, bits, nid,
                            other, s->cert->sec_ex);
 }
 

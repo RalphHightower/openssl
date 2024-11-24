@@ -118,11 +118,15 @@ static int check_fips_approved(EVP_TEST *t, int approved)
      * approved should be 0 and the fips indicator callback should be triggered.
      */
     if (t->expect_unapproved) {
-        if (approved == 1 || fips_indicator_callback_unapproved_count == 0)
+        if (approved == 1 || fips_indicator_callback_unapproved_count == 0) {
+            TEST_error("Test is not expected to be FIPS approved");
             return 0;
+        }
     } else {
-        if (approved == 0 || fips_indicator_callback_unapproved_count > 0)
+        if (approved == 0 || fips_indicator_callback_unapproved_count > 0) {
+            TEST_error("Test is expected to be FIPS approved");
             return 0;
+        }
     }
     return 1;
 }
@@ -784,7 +788,7 @@ static int digest_test_run(EVP_TEST *t)
         goto err;
     }
 
-    xof |= (EVP_MD_get_flags(expected->digest) & EVP_MD_FLAG_XOF) != 0;
+    xof |= EVP_MD_xof(expected->digest);
     if (xof) {
         EVP_MD_CTX *mctx_cpy;
 
@@ -2533,7 +2537,7 @@ static int pkey_test_run_init(EVP_TEST *t)
 {
     PKEY_DATA *data = t->data;
     int i, ret = 0;
-    OSSL_PARAM params[2] = { OSSL_PARAM_END, OSSL_PARAM_END };
+    OSSL_PARAM params[3] = { OSSL_PARAM_END, OSSL_PARAM_END, OSSL_PARAM_END };
     OSSL_PARAM *p = NULL;
     size_t params_n = 0, params_n_allocstart = 0;
 
@@ -2622,6 +2626,9 @@ static int pkey_test_run(EVP_TEST *t)
     if (!memory_err_compare(t, "KEYOP_MISMATCH",
                             expected->output, expected->output_len,
                             got, got_len))
+        goto err;
+
+    if (pkey_check_fips_approved(expected->ctx, t) <= 0)
         goto err;
 
  err:

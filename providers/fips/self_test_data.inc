@@ -56,7 +56,7 @@ typedef struct st_kat_st {
 /* FIPS 140-3 only allows DSA verification for legacy purposes */
 #define SIGNATURE_MODE_VERIFY_ONLY 1
 #define SIGNATURE_MODE_SIGN_ONLY   2
-#define SIGNATURE_MODE_ONESHOT     4
+#define SIGNATURE_MODE_DIGESTED    4
 
 typedef ST_KAT ST_KAT_DIGEST;
 typedef struct st_kat_cipher_st {
@@ -117,8 +117,8 @@ typedef struct st_kat_kas_st {
 
 typedef struct st_kat_sign_st {
     const char *desc;
-    const char *algorithm;
-    const char *mdalgorithm;
+    const char *keytype;
+    const char *sigalgorithm;
     int mode;
     const ST_KAT_PARAM *key;
     const unsigned char *msg;
@@ -250,6 +250,7 @@ static const unsigned char aes_128_ecb_ct[] = {
     0x4e, 0xaa, 0x6f, 0xb4, 0xdb, 0xf7, 0x84, 0x65
 };
 
+#ifndef OPENSSL_NO_DES
 /*
  * TDES-ECB test data from
  * https://github.com/usnistgov/ACVP-Server/blob/master/gen-val/json-files/ACVP-TDES-ECB-1.0
@@ -266,6 +267,7 @@ static const unsigned char tdes_ct[] = {
 static const unsigned char tdes_pt[] = {
     0x4B, 0xAB, 0x3B, 0xE1, 0x50, 0x2E, 0x3B, 0x36
 };
+#endif
 
 static const ST_KAT_CIPHER st_kat_cipher_tests[] = {
     {
@@ -291,6 +293,7 @@ static const ST_KAT_CIPHER st_kat_cipher_tests[] = {
         CIPHER_MODE_DECRYPT,
         ITM(aes_128_ecb_key)
     },
+#ifndef OPENSSL_NO_DES
     {
         {
             OSSL_SELF_TEST_DESC_CIPHER_TDES,
@@ -301,6 +304,7 @@ static const ST_KAT_CIPHER st_kat_cipher_tests[] = {
         CIPHER_MODE_DECRYPT,
         ITM(tdes_key)
     }
+#endif
 };
 
 static const char hkdf_digest[] = "SHA256";
@@ -1263,18 +1267,6 @@ static const ST_KAT_PARAM rsa_priv_key[] = {
     ST_KAT_PARAM_END()
 };
 
-/*-
- * Using OSSL_PKEY_RSA_PAD_MODE_NONE directly in the expansion of the
- * ST_KAT_PARAM_UTF8STRING macro below causes a failure on ancient
- * HP/UX PA-RISC compilers.
- */
-static const char pad_mode_none[] = OSSL_PKEY_RSA_PAD_MODE_NONE;
-
-static const ST_KAT_PARAM rsa_enc_params[] = {
-    ST_KAT_PARAM_UTF8STRING(OSSL_ASYM_CIPHER_PARAM_PAD_MODE, pad_mode_none),
-    ST_KAT_PARAM_END()
-};
-
 static const unsigned char rsa_sig_msg[] = "Hello World!";
 
 static const unsigned char rsa_expected_sig[256] = {
@@ -1651,7 +1643,7 @@ static const unsigned char sig_kat_persstr[] = {
 static const ST_KAT_SIGN st_kat_sign_tests[] = {
     {
         OSSL_SELF_TEST_DESC_SIGN_RSA,
-        "RSA", "SHA-256", 0,
+        "RSA", "RSA-SHA256", 0,
         rsa_crt_key,
         ITM_STR(rsa_sig_msg),
         ITM(sig_kat_entropyin),
@@ -1662,7 +1654,7 @@ static const ST_KAT_SIGN st_kat_sign_tests[] = {
 #ifndef OPENSSL_NO_EC
     {
         OSSL_SELF_TEST_DESC_SIGN_ECDSA,
-        "EC", "SHA-256", 0,
+        "EC", "ECDSA-SHA256", 0,
         ecdsa_prime_key,
         ITM_STR(rsa_sig_msg),
         ITM(sig_kat_entropyin),
@@ -1673,7 +1665,7 @@ static const ST_KAT_SIGN st_kat_sign_tests[] = {
 # ifndef OPENSSL_NO_EC2M
     {
         OSSL_SELF_TEST_DESC_SIGN_ECDSA,
-        "EC", "SHA-256", 0,
+        "EC", "ECDSA-SHA256", 0,
         ecdsa_bin_key,
         ITM_STR(rsa_sig_msg),
         ITM(sig_kat_entropyin),
@@ -1685,7 +1677,7 @@ static const ST_KAT_SIGN st_kat_sign_tests[] = {
 # ifndef OPENSSL_NO_ECX
     {
         OSSL_SELF_TEST_DESC_SIGN_EDDSA,
-        "ED448", NULL, SIGNATURE_MODE_ONESHOT,
+        "ED448", "ED448", 0,
         ed448_key,
         ITM(ecx_sig_msg),
         NULL, 0, NULL, 0, NULL, 0,
@@ -1693,7 +1685,7 @@ static const ST_KAT_SIGN st_kat_sign_tests[] = {
     },
     {
         OSSL_SELF_TEST_DESC_SIGN_EDDSA,
-        "ED25519", NULL, SIGNATURE_MODE_ONESHOT,
+        "ED25519", "ED25519", 0,
         ed25519_key,
         ITM(ecx_sig_msg),
         NULL, 0, NULL, 0, NULL, 0,
@@ -1704,7 +1696,7 @@ static const ST_KAT_SIGN st_kat_sign_tests[] = {
 #ifndef OPENSSL_NO_DSA
     {
         OSSL_SELF_TEST_DESC_SIGN_DSA,
-        "DSA", "SHA-256", SIGNATURE_MODE_VERIFY_ONLY,
+        "DSA", "DSA-SHA256", SIGNATURE_MODE_VERIFY_ONLY,
         dsa_key,
         ITM_STR(rsa_sig_msg),
         ITM(sig_kat_entropyin),
@@ -1713,34 +1705,4 @@ static const ST_KAT_SIGN st_kat_sign_tests[] = {
         ITM(dsa_expected_sig)
     },
 #endif /* OPENSSL_NO_DSA */
-};
-
-static const ST_KAT_ASYM_CIPHER st_kat_asym_cipher_tests[] = {
-    {
-        OSSL_SELF_TEST_DESC_ASYM_RSA_ENC,
-        "RSA",
-        1,
-        rsa_pub_key,
-        rsa_enc_params,
-        ITM(rsa_asym_plaintext_encrypt),
-        ITM(rsa_asym_expected_encrypt),
-    },
-    {
-        OSSL_SELF_TEST_DESC_ASYM_RSA_DEC,
-        "RSA",
-        0,
-        rsa_priv_key,
-        rsa_enc_params,
-        ITM(rsa_asym_expected_encrypt),
-        ITM(rsa_asym_plaintext_encrypt),
-    },
-    {
-        OSSL_SELF_TEST_DESC_ASYM_RSA_DEC,
-        "RSA",
-        0,
-        rsa_crt_key,
-        rsa_enc_params,
-        ITM(rsa_asym_expected_encrypt),
-        ITM(rsa_asym_plaintext_encrypt),
-    },
 };

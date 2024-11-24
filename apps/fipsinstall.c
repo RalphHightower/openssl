@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2023 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2019-2024 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -59,6 +59,7 @@ typedef enum OPTION_choice {
     OPT_SSHKDF_KEY_CHECK,
     OPT_SSKDF_KEY_CHECK,
     OPT_X963KDF_KEY_CHECK,
+    OPT_X942KDF_KEY_CHECK,
     OPT_NO_PBKDF2_LOWER_BOUND_CHECK,
     OPT_ECDH_COFACTOR_CHECK,
     OPT_SELF_TEST_ONLOAD, OPT_SELF_TEST_ONINSTALL
@@ -128,6 +129,8 @@ const OPTIONS fipsinstall_options[] = {
      "Enable key check for SSKDF"},
     {"x963kdf_key_check", OPT_X963KDF_KEY_CHECK, '-',
      "Enable key check for X963KDF"},
+    {"x942kdf_key_check", OPT_X942KDF_KEY_CHECK, '-',
+     "Enable key check for X942KDF"},
     {"no_pbkdf2_lower_bound_check", OPT_NO_PBKDF2_LOWER_BOUND_CHECK, '-',
      "Disable lower bound check for PBKDF2"},
     {"ecdh_cofactor_check", OPT_ECDH_COFACTOR_CHECK, '-',
@@ -176,6 +179,7 @@ typedef struct {
     unsigned int sshkdf_key_check : 1;
     unsigned int sskdf_key_check : 1;
     unsigned int x963kdf_key_check : 1;
+    unsigned int x942kdf_key_check : 1;
     unsigned int pbkdf2_lower_bound_check : 1;
     unsigned int ecdh_cofactor_check : 1;
 } FIPS_OPTS;
@@ -209,6 +213,7 @@ static const FIPS_OPTS pedantic_opts = {
     1,      /* sshkdf_key_check */
     1,      /* sskdf_key_check */
     1,      /* x963kdf_key_check */
+    1,      /* x942kdf_key_check */
     1,      /* pbkdf2_lower_bound_check */
     1,      /* ecdh_cofactor_check */
 };
@@ -242,6 +247,7 @@ static FIPS_OPTS fips_opts = {
     0,      /* sshkdf_key_check */
     0,      /* sskdf_key_check */
     0,      /* x963kdf_key_check */
+    0,      /* x942kdf_key_check */
     1,      /* pbkdf2_lower_bound_check */
     0,      /* ecdh_cofactor_check */
 };
@@ -278,7 +284,8 @@ err:
     return ret;
 }
 
-static int load_fips_prov_and_run_self_test(const char *prov_name)
+static int load_fips_prov_and_run_self_test(const char *prov_name,
+                                            int *is_fips_140_2_prov)
 {
     int ret = 0;
     OSSL_PROVIDER *prov = NULL;
@@ -308,7 +315,16 @@ static int load_fips_prov_and_run_self_test(const char *prov_name)
             BIO_printf(bio_err, "\t%-10s\t%s\n", "version:", vers);
         if (OSSL_PARAM_modified(params + 2))
             BIO_printf(bio_err, "\t%-10s\t%s\n", "build:", build);
+    } else {
+        *p++ = OSSL_PARAM_construct_utf8_ptr(OSSL_PROV_PARAM_VERSION,
+                                             &vers, sizeof(vers));
+        *p = OSSL_PARAM_construct_end();
+        if (!OSSL_PROVIDER_get_params(prov, params)) {
+            BIO_printf(bio_err, "Failed to query FIPS module parameters\n");
+            goto end;
+        }
     }
+    *is_fips_140_2_prov = (strncmp("3.0.", vers, 4) == 0);
     ret = 1;
 end:
     OSSL_PROVIDER_unload(prov);
@@ -361,74 +377,78 @@ static int write_config_fips_section(BIO *out, const char *section,
                       VERSION_VAL) <= 0
         || BIO_printf(out, "%s = %s\n", OSSL_PROV_FIPS_PARAM_CONDITIONAL_ERRORS,
                       opts->conditional_errors ? "1" : "0") <= 0
-        || BIO_printf(out, "%s = %s\n", OSSL_PROV_FIPS_PARAM_SECURITY_CHECKS,
+        || BIO_printf(out, "%s = %s\n", OSSL_PROV_PARAM_SECURITY_CHECKS,
                       opts->security_checks ? "1" : "0") <= 0
-        || BIO_printf(out, "%s = %s\n", OSSL_PROV_FIPS_PARAM_HMAC_KEY_CHECK,
+        || BIO_printf(out, "%s = %s\n", OSSL_PROV_PARAM_HMAC_KEY_CHECK,
                       opts->hmac_key_check ? "1": "0") <= 0
-        || BIO_printf(out, "%s = %s\n", OSSL_PROV_FIPS_PARAM_KMAC_KEY_CHECK,
+        || BIO_printf(out, "%s = %s\n", OSSL_PROV_PARAM_KMAC_KEY_CHECK,
                       opts->kmac_key_check ? "1": "0") <= 0
-        || BIO_printf(out, "%s = %s\n", OSSL_PROV_FIPS_PARAM_TLS1_PRF_EMS_CHECK,
+        || BIO_printf(out, "%s = %s\n", OSSL_PROV_PARAM_TLS1_PRF_EMS_CHECK,
                       opts->tls_prf_ems_check ? "1" : "0") <= 0
         || BIO_printf(out, "%s = %s\n", OSSL_PROV_PARAM_NO_SHORT_MAC,
                       opts->no_short_mac ? "1" : "0") <= 0
-        || BIO_printf(out, "%s = %s\n", OSSL_PROV_FIPS_PARAM_DRBG_TRUNC_DIGEST,
+        || BIO_printf(out, "%s = %s\n", OSSL_PROV_PARAM_DRBG_TRUNC_DIGEST,
                       opts->drgb_no_trunc_dgst ? "1" : "0") <= 0
-        || BIO_printf(out, "%s = %s\n", OSSL_PROV_FIPS_PARAM_SIGNATURE_DIGEST_CHECK,
+        || BIO_printf(out, "%s = %s\n", OSSL_PROV_PARAM_SIGNATURE_DIGEST_CHECK,
                       opts->signature_digest_check ? "1" : "0") <= 0
-        || BIO_printf(out, "%s = %s\n", OSSL_PROV_FIPS_PARAM_HKDF_DIGEST_CHECK,
+        || BIO_printf(out, "%s = %s\n", OSSL_PROV_PARAM_HKDF_DIGEST_CHECK,
                       opts->hkdf_digest_check ? "1": "0") <= 0
         || BIO_printf(out, "%s = %s\n",
-                      OSSL_PROV_FIPS_PARAM_TLS13_KDF_DIGEST_CHECK,
+                      OSSL_PROV_PARAM_TLS13_KDF_DIGEST_CHECK,
                       opts->tls13_kdf_digest_check ? "1": "0") <= 0
         || BIO_printf(out, "%s = %s\n",
-                      OSSL_PROV_FIPS_PARAM_TLS1_PRF_DIGEST_CHECK,
+                      OSSL_PROV_PARAM_TLS1_PRF_DIGEST_CHECK,
                       opts->tls1_prf_digest_check ? "1": "0") <= 0
         || BIO_printf(out, "%s = %s\n",
-                      OSSL_PROV_FIPS_PARAM_SSHKDF_DIGEST_CHECK,
+                      OSSL_PROV_PARAM_SSHKDF_DIGEST_CHECK,
                       opts->sshkdf_digest_check ? "1": "0") <= 0
-        || BIO_printf(out, "%s = %s\n", OSSL_PROV_FIPS_PARAM_SSKDF_DIGEST_CHECK,
+        || BIO_printf(out, "%s = %s\n", OSSL_PROV_PARAM_SSKDF_DIGEST_CHECK,
                       opts->sskdf_digest_check ? "1": "0") <= 0
         || BIO_printf(out, "%s = %s\n",
-                      OSSL_PROV_FIPS_PARAM_X963KDF_DIGEST_CHECK,
+                      OSSL_PROV_PARAM_X963KDF_DIGEST_CHECK,
                       opts->x963kdf_digest_check ? "1": "0") <= 0
-        || BIO_printf(out, "%s = %s\n", OSSL_PROV_FIPS_PARAM_DSA_SIGN_DISABLED,
+        || BIO_printf(out, "%s = %s\n", OSSL_PROV_PARAM_DSA_SIGN_DISABLED,
                       opts->dsa_sign_disabled ? "1" : "0") <= 0
         || BIO_printf(out, "%s = %s\n", OSSL_PROV_PARAM_TDES_ENCRYPT_DISABLED,
                       opts->tdes_encrypt_disabled ? "1" : "0") <= 0
         || BIO_printf(out, "%s = %s\n",
-                      OSSL_PROV_FIPS_PARAM_RSA_PKCS15_PADDING_DISABLED,
+                      OSSL_PROV_PARAM_RSA_PKCS15_PAD_DISABLED,
                       opts->rsa_pkcs15_padding_disabled ? "1" : "0") <= 0
         || BIO_printf(out, "%s = %s\n",
-                      OSSL_PROV_FIPS_PARAM_RSA_PSS_SALTLEN_CHECK,
+                      OSSL_PROV_PARAM_RSA_PSS_SALTLEN_CHECK,
                       opts->rsa_pss_saltlen_check ? "1" : "0") <= 0
         || BIO_printf(out, "%s = %s\n",
-                      OSSL_PROV_FIPS_PARAM_RSA_SIGN_X931_PAD_DISABLED,
+                      OSSL_PROV_PARAM_RSA_SIGN_X931_PAD_DISABLED,
                       opts->sign_x931_padding_disabled ? "1" : "0") <= 0
-        || BIO_printf(out, "%s = %s\n", OSSL_PROV_FIPS_PARAM_HKDF_KEY_CHECK,
+        || BIO_printf(out, "%s = %s\n", OSSL_PROV_PARAM_HKDF_KEY_CHECK,
                       opts->hkdf_key_check ? "1": "0") <= 0
-        || BIO_printf(out, "%s = %s\n", OSSL_PROV_FIPS_PARAM_KBKDF_KEY_CHECK,
+        || BIO_printf(out, "%s = %s\n", OSSL_PROV_PARAM_KBKDF_KEY_CHECK,
                       opts->kbkdf_key_check ? "1": "0") <= 0
         || BIO_printf(out, "%s = %s\n",
-                      OSSL_PROV_FIPS_PARAM_TLS13_KDF_KEY_CHECK,
+                      OSSL_PROV_PARAM_TLS13_KDF_KEY_CHECK,
                       opts->tls13_kdf_key_check ? "1": "0") <= 0
-        || BIO_printf(out, "%s = %s\n", OSSL_PROV_FIPS_PARAM_TLS1_PRF_KEY_CHECK,
+        || BIO_printf(out, "%s = %s\n", OSSL_PROV_PARAM_TLS1_PRF_KEY_CHECK,
                       opts->tls1_prf_key_check ? "1": "0") <= 0
-        || BIO_printf(out, "%s = %s\n", OSSL_PROV_FIPS_PARAM_SSHKDF_KEY_CHECK,
+        || BIO_printf(out, "%s = %s\n", OSSL_PROV_PARAM_SSHKDF_KEY_CHECK,
                       opts->sshkdf_key_check ? "1": "0") <= 0
-        || BIO_printf(out, "%s = %s\n", OSSL_PROV_FIPS_PARAM_SSKDF_KEY_CHECK,
+        || BIO_printf(out, "%s = %s\n", OSSL_PROV_PARAM_SSKDF_KEY_CHECK,
                       opts->sskdf_key_check ? "1": "0") <= 0
-        || BIO_printf(out, "%s = %s\n", OSSL_PROV_FIPS_PARAM_X963KDF_KEY_CHECK,
+        || BIO_printf(out, "%s = %s\n", OSSL_PROV_PARAM_X963KDF_KEY_CHECK,
                       opts->x963kdf_key_check ? "1": "0") <= 0
+        || BIO_printf(out, "%s = %s\n", OSSL_PROV_PARAM_X942KDF_KEY_CHECK,
+                      opts->x942kdf_key_check ? "1": "0") <= 0
         || BIO_printf(out, "%s = %s\n",
-                      OSSL_PROV_FIPS_PARAM_PBKDF2_LOWER_BOUND_CHECK,
+                      OSSL_PROV_PARAM_PBKDF2_LOWER_BOUND_CHECK,
                       opts->pbkdf2_lower_bound_check ? "1" : "0") <= 0
-        || BIO_printf(out, "%s = %s\n", OSSL_PROV_FIPS_PARAM_ECDH_COFACTOR_CHECK,
+        || BIO_printf(out, "%s = %s\n", OSSL_PROV_PARAM_ECDH_COFACTOR_CHECK,
                       opts->ecdh_cofactor_check ? "1": "0") <= 0
         || !print_mac(out, OSSL_PROV_FIPS_PARAM_MODULE_MAC, module_mac,
                       module_mac_len))
         goto end;
 
-    if (install_mac != NULL && install_mac_len > 0) {
+    if (install_mac != NULL
+            && install_mac_len > 0
+            && opts->self_test_onload == 0) {
         if (!print_mac(out, OSSL_PROV_FIPS_PARAM_INSTALL_MAC, install_mac,
                        install_mac_len)
             || BIO_printf(out, "%s = %s\n", OSSL_PROV_FIPS_PARAM_INSTALL_STATUS,
@@ -551,6 +571,7 @@ end:
 int fipsinstall_main(int argc, char **argv)
 {
     int ret = 1, verify = 0, gotkey = 0, gotdigest = 0, pedantic = 0;
+    int is_fips_140_2_prov = 0, set_selftest_onload_option = 0;
     const char *section_name = "fips_sect";
     const char *mac_name = "HMAC";
     const char *prov_name = "fips";
@@ -676,6 +697,9 @@ int fipsinstall_main(int argc, char **argv)
         case OPT_X963KDF_KEY_CHECK:
             fips_opts.x963kdf_key_check = 1;
             break;
+        case OPT_X942KDF_KEY_CHECK:
+            fips_opts.x942kdf_key_check = 1;
+            break;
         case OPT_NO_PBKDF2_LOWER_BOUND_CHECK:
             if (!check_non_pedantic_fips(pedantic, "no_pbkdf2_lower_bound_check"))
                 goto end;
@@ -723,11 +747,13 @@ int fipsinstall_main(int argc, char **argv)
             verify = 1;
             break;
         case OPT_SELF_TEST_ONLOAD:
+            set_selftest_onload_option = 1;
             fips_opts.self_test_onload = 1;
             break;
         case OPT_SELF_TEST_ONINSTALL:
             if (!check_non_pedantic_fips(pedantic, "self_test_oninstall"))
                 goto end;
+            set_selftest_onload_option = 1;
             fips_opts.self_test_onload = 0;
             break;
         }
@@ -825,33 +851,42 @@ int fipsinstall_main(int argc, char **argv)
     if (!do_mac(ctx, read_buffer, module_bio, module_mac, &module_mac_len))
         goto end;
 
-    if (fips_opts.self_test_onload == 0) {
-        mem_bio = BIO_new_mem_buf((const void *)INSTALL_STATUS_VAL,
-                                  strlen(INSTALL_STATUS_VAL));
-        if (mem_bio == NULL) {
-            BIO_printf(bio_err, "Unable to create memory BIO\n");
-            goto end;
-        }
-        if (!do_mac(ctx2, read_buffer, mem_bio, install_mac, &install_mac_len))
-            goto end;
-    } else {
-        install_mac_len = 0;
+    /* Calculate the MAC for the indicator status - it may not be used */
+    mem_bio = BIO_new_mem_buf((const void *)INSTALL_STATUS_VAL,
+                              strlen(INSTALL_STATUS_VAL));
+    if (mem_bio == NULL) {
+        BIO_printf(bio_err, "Unable to create memory BIO\n");
+        goto end;
     }
+    if (!do_mac(ctx2, read_buffer, mem_bio, install_mac, &install_mac_len))
+        goto end;
 
     if (verify) {
+        if (fips_opts.self_test_onload == 1)
+            install_mac_len = 0;
         if (!verify_config(in_fname, section_name, module_mac, module_mac_len,
                            install_mac, install_mac_len))
             goto end;
         if (!quiet)
             BIO_printf(bio_err, "VERIFY PASSED\n");
     } else {
-
         conf = generate_config_and_load(prov_name, section_name, module_mac,
                                         module_mac_len, &fips_opts);
         if (conf == NULL)
             goto end;
-        if (!load_fips_prov_and_run_self_test(prov_name))
+        if (!load_fips_prov_and_run_self_test(prov_name, &is_fips_140_2_prov))
             goto end;
+
+        /*
+         * In OpenSSL 3.1 the code was changed so that the status indicator is
+         * not written out by default since this is a FIPS 140-3 requirement.
+         * For backwards compatibility - if the detected FIPS provider is 3.0.X
+         * (Which was a FIPS 140-2 validation), then the indicator status will
+         * be written to the config file unless 'self_test_onload' is set on the
+         * command line.
+         */
+        if (set_selftest_onload_option == 0 && is_fips_140_2_prov)
+            fips_opts.self_test_onload = 0;
 
         fout =
             out_fname == NULL ? dup_bio_out(FORMAT_TEXT)
@@ -860,6 +895,7 @@ int fipsinstall_main(int argc, char **argv)
             BIO_printf(bio_err, "Failed to open file\n");
             goto end;
         }
+
         if (!write_config_fips_section(fout, section_name,
                                        module_mac, module_mac_len, &fips_opts,
                                        install_mac, install_mac_len))

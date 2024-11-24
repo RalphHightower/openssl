@@ -1203,6 +1203,10 @@ DEPEND[html/man3/EVP_PKEY_CTX_get0_pkey.html]=man3/EVP_PKEY_CTX_get0_pkey.pod
 GENERATE[html/man3/EVP_PKEY_CTX_get0_pkey.html]=man3/EVP_PKEY_CTX_get0_pkey.pod
 DEPEND[man/man3/EVP_PKEY_CTX_get0_pkey.3]=man3/EVP_PKEY_CTX_get0_pkey.pod
 GENERATE[man/man3/EVP_PKEY_CTX_get0_pkey.3]=man3/EVP_PKEY_CTX_get0_pkey.pod
+DEPEND[html/man3/EVP_PKEY_CTX_get_algor.html]=man3/EVP_PKEY_CTX_get_algor.pod
+GENERATE[html/man3/EVP_PKEY_CTX_get_algor.html]=man3/EVP_PKEY_CTX_get_algor.pod
+DEPEND[man/man3/EVP_PKEY_CTX_get_algor.3]=man3/EVP_PKEY_CTX_get_algor.pod
+GENERATE[man/man3/EVP_PKEY_CTX_get_algor.3]=man3/EVP_PKEY_CTX_get_algor.pod
 DEPEND[html/man3/EVP_PKEY_CTX_new.html]=man3/EVP_PKEY_CTX_new.pod
 GENERATE[html/man3/EVP_PKEY_CTX_new.html]=man3/EVP_PKEY_CTX_new.pod
 DEPEND[man/man3/EVP_PKEY_CTX_new.3]=man3/EVP_PKEY_CTX_new.pod
@@ -1783,6 +1787,10 @@ DEPEND[html/man3/OSSL_PARAM_int.html]=man3/OSSL_PARAM_int.pod
 GENERATE[html/man3/OSSL_PARAM_int.html]=man3/OSSL_PARAM_int.pod
 DEPEND[man/man3/OSSL_PARAM_int.3]=man3/OSSL_PARAM_int.pod
 GENERATE[man/man3/OSSL_PARAM_int.3]=man3/OSSL_PARAM_int.pod
+DEPEND[html/man3/OSSL_PARAM_print_to_bio.html]=man3/OSSL_PARAM_print_to_bio.pod
+GENERATE[html/man3/OSSL_PARAM_print_to_bio.html]=man3/OSSL_PARAM_print_to_bio.pod
+DEPEND[man/man3/OSSL_PARAM_print_to_bio.3]=man3/OSSL_PARAM_print_to_bio.pod
+GENERATE[man/man3/OSSL_PARAM_print_to_bio.3]=man3/OSSL_PARAM_print_to_bio.pod
 DEPEND[html/man3/OSSL_PROVIDER.html]=man3/OSSL_PROVIDER.pod
 GENERATE[html/man3/OSSL_PROVIDER.html]=man3/OSSL_PROVIDER.pod
 DEPEND[man/man3/OSSL_PROVIDER.3]=man3/OSSL_PROVIDER.pod
@@ -3300,6 +3308,7 @@ html/man3/EVP_PKEY_ASN1_METHOD.html \
 html/man3/EVP_PKEY_CTX_ctrl.html \
 html/man3/EVP_PKEY_CTX_get0_libctx.html \
 html/man3/EVP_PKEY_CTX_get0_pkey.html \
+html/man3/EVP_PKEY_CTX_get_algor.html \
 html/man3/EVP_PKEY_CTX_new.html \
 html/man3/EVP_PKEY_CTX_set1_pbe_pass.html \
 html/man3/EVP_PKEY_CTX_set_hkdf_md.html \
@@ -3445,6 +3454,7 @@ html/man3/OSSL_PARAM_BLD.html \
 html/man3/OSSL_PARAM_allocate_from_text.html \
 html/man3/OSSL_PARAM_dup.html \
 html/man3/OSSL_PARAM_int.html \
+html/man3/OSSL_PARAM_print_to_bio.html \
 html/man3/OSSL_PROVIDER.html \
 html/man3/OSSL_QUIC_client_method.html \
 html/man3/OSSL_SELF_TEST_new.html \
@@ -3962,6 +3972,7 @@ man/man3/EVP_PKEY_ASN1_METHOD.3 \
 man/man3/EVP_PKEY_CTX_ctrl.3 \
 man/man3/EVP_PKEY_CTX_get0_libctx.3 \
 man/man3/EVP_PKEY_CTX_get0_pkey.3 \
+man/man3/EVP_PKEY_CTX_get_algor.3 \
 man/man3/EVP_PKEY_CTX_new.3 \
 man/man3/EVP_PKEY_CTX_set1_pbe_pass.3 \
 man/man3/EVP_PKEY_CTX_set_hkdf_md.3 \
@@ -4107,6 +4118,7 @@ man/man3/OSSL_PARAM_BLD.3 \
 man/man3/OSSL_PARAM_allocate_from_text.3 \
 man/man3/OSSL_PARAM_dup.3 \
 man/man3/OSSL_PARAM_int.3 \
+man/man3/OSSL_PARAM_print_to_bio.3 \
 man/man3/OSSL_PROVIDER.3 \
 man/man3/OSSL_QUIC_client_method.3 \
 man/man3/OSSL_SELF_TEST_new.3 \
@@ -4739,6 +4751,10 @@ DEPEND[html/man7/EVP_PKEY-X25519.html]=man7/EVP_PKEY-X25519.pod
 GENERATE[html/man7/EVP_PKEY-X25519.html]=man7/EVP_PKEY-X25519.pod
 DEPEND[man/man7/EVP_PKEY-X25519.7]=man7/EVP_PKEY-X25519.pod
 GENERATE[man/man7/EVP_PKEY-X25519.7]=man7/EVP_PKEY-X25519.pod
+DEPEND[html/man7/EVP_RAND-CRNG-TEST.html]=man7/EVP_RAND-CRNG-TEST.pod
+GENERATE[html/man7/EVP_RAND-CRNG-TEST.html]=man7/EVP_RAND-CRNG-TEST.pod
+DEPEND[man/man7/EVP_RAND-CRNG-TEST.7]=man7/EVP_RAND-CRNG-TEST.pod
+GENERATE[man/man7/EVP_RAND-CRNG-TEST.7]=man7/EVP_RAND-CRNG-TEST.pod
 DEPEND[html/man7/EVP_RAND-CTR-DRBG.html]=man7/EVP_RAND-CTR-DRBG.pod
 GENERATE[html/man7/EVP_RAND-CTR-DRBG.html]=man7/EVP_RAND-CTR-DRBG.pod
 DEPEND[man/man7/EVP_RAND-CTR-DRBG.7]=man7/EVP_RAND-CTR-DRBG.pod
@@ -5121,6 +5137,7 @@ html/man7/EVP_PKEY-HMAC.html \
 html/man7/EVP_PKEY-RSA.html \
 html/man7/EVP_PKEY-SM2.html \
 html/man7/EVP_PKEY-X25519.html \
+html/man7/EVP_RAND-CRNG-TEST.html \
 html/man7/EVP_RAND-CTR-DRBG.html \
 html/man7/EVP_RAND-HASH-DRBG.html \
 html/man7/EVP_RAND-HMAC-DRBG.html \
@@ -5267,6 +5284,7 @@ man/man7/EVP_PKEY-HMAC.7 \
 man/man7/EVP_PKEY-RSA.7 \
 man/man7/EVP_PKEY-SM2.7 \
 man/man7/EVP_PKEY-X25519.7 \
+man/man7/EVP_RAND-CRNG-TEST.7 \
 man/man7/EVP_RAND-CTR-DRBG.7 \
 man/man7/EVP_RAND-HASH-DRBG.7 \
 man/man7/EVP_RAND-HMAC-DRBG.7 \

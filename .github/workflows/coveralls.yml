@@ -1,4 +1,4 @@
-# Copyright 2021-2023 The OpenSSL Project Authors. All Rights Reserved.
+# Copyright 2021-2024 The OpenSSL Project Authors. All Rights Reserved.
 #
 # Licensed under the Apache License 2.0 (the "License").  You may not use
 # this file except in compliance with the License.  You can obtain a copy
@@ -10,7 +10,8 @@ name: Coverage
 # Run once a day
 on:
   schedule:
-    - cron:  '49 0 * * *'
+    - cron:  '15 02 * * *'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -25,6 +26,9 @@ jobs:
       matrix:
         branches: [
           {
+            branch: openssl-3.4,
+            extra_config: no-afalgeng enable-fips enable-tfo
+          }, {
             branch: openssl-3.3,
             extra_config: no-afalgeng enable-fips enable-tfo
           }, {
@@ -82,7 +86,7 @@ jobs:
              --exclude "/usr/include/*"
               -o ./lcov.info
     - name: Coveralls upload
-      uses: coverallsapp/github-action@v2.3.0
+      uses: coverallsapp/github-action@v2.3.2
       with:
         github-token: ${{ secrets.github_token }}
         git-branch: ${{ matrix.branches.branch }}

@@ -1,5 +1,5 @@
 #! /usr/bin/env perl
-# Copyright 2019-2023 The OpenSSL Project Authors. All Rights Reserved.
+# Copyright 2019-2024 The OpenSSL Project Authors. All Rights Reserved.
 #
 # Licensed under the Apache License 2.0 (the "License").  You may not use
 # this file except in compliance with the License.  You can obtain a copy
@@ -50,7 +50,7 @@ my @commandline =
         ( 'x963kdf_digest_check',           'x963kdf-digest-check' ),
         ( 'dsa_sign_disabled',              'dsa-sign-disabled' ),
         ( 'tdes_encrypt_disabled',          'tdes-encrypt-disabled' ),
-        ( 'rsa_pkcs15_padding_disabled',    'rsa-pkcs15-padding-disabled' ),
+        ( 'rsa_pkcs15_pad_disabled',        'rsa-pkcs15-pad-disabled' ),
         ( 'rsa_pss_saltlen_check',          'rsa-pss-saltlen-check' ),
         ( 'rsa_sign_x931_disabled',         'rsa-sign-x931-pad-disabled' ),
         ( 'hkdf_key_check',                 'hkdf-key-check' ),
@@ -59,10 +59,11 @@ my @commandline =
         ( 'tls1_prf_key_check',             'tls1-prf-key-check' ),
         ( 'sshkdf_key_check',               'sshkdf-key-check' ),
         ( 'sskdf_key_check',                'sskdf-key-check' ),
-        ( 'x963kdf_key_check',              'x963kdf-key-check' )
+        ( 'x963kdf_key_check',              'x963kdf-key-check' ),
+        ( 'x942kdf_key_check',              'x942kdf-key-check' )
     );
 
-plan tests => 35 + (scalar @pedantic_okay) + (scalar @pedantic_fail)
+plan tests => 36 + (scalar @pedantic_okay) + (scalar @pedantic_fail)
               + 4 * (scalar @commandline);
 
 my $infile = bldtop_file('providers', platform->dso('fips'));
@@ -149,7 +150,6 @@ ok(!run(app(['openssl', 'fipsinstall', '-in', 'dummy.tmp', '-module', $infile,
              '-section_name', 'fips_sect', '-verify'])),
    "fipsinstall verify fail");
 
-
 # output a fips.cnf file containing mac data
 ok(run(app(['openssl', 'fipsinstall', '-out', 'fips.cnf', '-module', $infile,
             '-provider_name', 'fips', '-mac_name', 'HMAC',
@@ -163,6 +163,23 @@ ok(run(app(['openssl', 'fipsinstall', '-in', 'fips.cnf', '-module', $infile,
             '-macopt', 'digest:SHA256', '-macopt', "hexkey:$fipskey",
             '-section_name', 'fips_sect', '-verify'])),
    "fipsinstall verify");
+
+# Test that default options for fipsinstall output the 'install-status' for
+# FIPS 140-2 providers.
+SKIP: {
+    run(test(["fips_version_test", "-config", $provconf, "<3.1.0"]),
+             capture => 1, statusvar => \my $exit);
+
+    skip "Skipping FIPS 140-3 provider", 2
+        if !$exit;
+
+    ok(find_line_file('install-mac = ', 'fips.cnf') == 1,
+       'FIPS 140-2 should output install-mac');
+
+    ok(find_line_file('install-status = INSTALL_SELF_TEST_KATS_RUN',
+                      'fips.cnf') == 1,
+       'FIPS 140-2 should output install-status');
+}
 
 # Skip Tests if POST is disabled
 SKIP: {
@@ -332,16 +349,6 @@ SKIP: {
        "fipsinstall fails when the signature result is corrupted");
 }
 
-# corrupt an Asymmetric cipher test
-SKIP: {
-    skip "Skipping Asymmetric RSA corruption test because of no rsa in this build", 1
-        if disabled("rsa") || disabled("fips-post");
-    ok(!run(app(['openssl', 'fipsinstall', '-out', 'fips.cnf', '-module', $infile,
-                '-corrupt_desc', 'RSA_Encrypt',
-                '-corrupt_type', 'KAT_AsymmetricCipher'])),
-       "fipsinstall fails when the asymmetric cipher result is corrupted");
-}
-
 # 'local' ensures that this change is only done in this file.
 local $ENV{OPENSSL_CONF_INCLUDE} = abs2rel(curdir());
 
@@ -465,4 +472,3 @@ foreach my $cp (@commandline) {
     ok(find_line_file("${l} = 1", "fips-${o}.cnf") == 1,
        "fipsinstall enables ${l} with -${o} option");
 }
-

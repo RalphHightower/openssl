@@ -1,5 +1,5 @@
 /*
- * Copyright 1995-2023 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2024 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -419,7 +419,7 @@ int dgst_main(int argc, char **argv)
         md_name = EVP_MD_get0_name(md);
 
     if (xoflen > 0) {
-        if (!(EVP_MD_get_flags(md) & EVP_MD_FLAG_XOF)) {
+        if (!EVP_MD_xof(md)) {
             BIO_printf(bio_err, "Length can only be specified for XOF\n");
             goto end;
         }

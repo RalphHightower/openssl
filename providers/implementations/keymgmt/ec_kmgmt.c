@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2023 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2020-2024 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -26,7 +26,6 @@
 #include "prov/providercommon.h"
 #include "prov/provider_ctx.h"
 #include "prov/securitycheck.h"
-#include "prov/fipsindicator.h"
 #include "internal/param_build_set.h"
 
 #ifndef FIPS_MODULE
@@ -833,9 +832,8 @@ int ec_set_params(void *key, const OSSL_PARAM params[])
 
     if (key == NULL)
         return 0;
-    if (params == NULL)
+    if (ossl_param_is_empty(params))
         return 1;
-
 
     if (!ossl_ec_group_set_params((EC_GROUP *)EC_KEY_get0_group(key), params))
         return 0;
@@ -1311,7 +1309,7 @@ static void *ec_gen(void *genctx, OSSL_CALLBACK *osslcb, void *cbarg)
     if (!ossl_ec_check_security_strength(gctx->gen_group, 1)) {
         if (!OSSL_FIPS_IND_ON_UNAPPROVED(gctx, OSSL_FIPS_IND_SETTABLE0,
                                          gctx->libctx, "EC KeyGen", "key size",
-                                         ossl_securitycheck_enabled)) {
+                                         ossl_fips_config_securitycheck_enabled)) {
             ERR_raise(ERR_LIB_PROV, PROV_R_INVALID_KEY_LENGTH);
             goto err;
         }
