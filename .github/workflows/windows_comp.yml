@@ -23,11 +23,16 @@ jobs:
   zstd:
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v4
+    - name: Harden Runner
+      uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - name: checkout fuzz/corpora submodule
       run: git submodule update --init --depth 1 fuzz/corpora
-    - uses: ilammy/msvc-dev-cmd@v1
-    - uses: ilammy/setup-nasm@v1
+    - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+    - uses: ilammy/setup-nasm@13cbeb366c45c4379d3478cdcbadd8295feb5028 # v1.5.1
     - name: prepare the build directory
       run: mkdir _build
     - name: Get zstd
@@ -59,7 +64,7 @@ jobs:
         reg.exe add HKLM\SOFTWARE\OpenSSL-${Env:OSSL_VERSION}-openssl /v MODULESDIR /t REG_EXPAND_SZ /d TESTOPENSSLDIR /reg:32
         reg.exe query HKLM\SOFTWARE\OpenSSL-${Env:OSSL_VERSION}-openssl /v OPENSSLDIR /reg:32
     - name: download coreinfo
-      uses: suisei-cn/actions-download-file@v1.6.0
+      uses: suisei-cn/actions-download-file@818d6b7dc8fe73f2f924b6241f2b1134ca1377d9 # v1.6.0
       with:
         url: "https://download.sysinternals.com/files/Coreinfo.zip"
         target: _build/coreinfo/
@@ -82,11 +87,16 @@ jobs:
   brotli:
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v4
+    - name: Harden Runner
+      uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - name: checkout fuzz/corpora submodule
       run: git submodule update --init --depth 1 fuzz/corpora
-    - uses: ilammy/msvc-dev-cmd@v1
-    - uses: ilammy/setup-nasm@v1
+    - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+    - uses: ilammy/setup-nasm@13cbeb366c45c4379d3478cdcbadd8295feb5028 # v1.5.1
     - name: prepare the build directory
       run: mkdir _build
     - name: Get brotli
@@ -118,7 +128,7 @@ jobs:
         reg.exe add HKLM\SOFTWARE\OpenSSL-${Env:OSSL_VERSION}-openssl /v MODULESDIR /t REG_EXPAND_SZ /d TESTOPENSSLDIR /reg:32
         reg.exe query HKLM\SOFTWARE\OpenSSL-${Env:OSSL_VERSION}-openssl /v OPENSSLDIR /reg:32
     - name: download coreinfo
-      uses: suisei-cn/actions-download-file@v1.6.0
+      uses: suisei-cn/actions-download-file@818d6b7dc8fe73f2f924b6241f2b1134ca1377d9 # v1.6.0
       with:
         url: "https://download.sysinternals.com/files/Coreinfo.zip"
         target: _build/coreinfo/

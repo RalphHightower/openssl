@@ -28,11 +28,16 @@ jobs:
   check_update:
     runs-on: ubuntu-latest
     steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+      with:
+        egress-policy: audit
+
     - name: install unifdef
       run: |
         sudo apt-get update
         sudo apt-get -yq --no-install-suggests --no-install-recommends --force-yes install unifdef
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         fetch-depth: 0
     - name: config
@@ -47,7 +52,12 @@ jobs:
   check_docs:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - name: Harden Runner
+      uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - name: config
       run: ./config --banner=Configured --strict-warnings enable-fips && perl configdata.pm --dump
     - name: make build_generated
@@ -67,7 +77,12 @@ jobs:
   check-ansi:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - name: Harden Runner
+      uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - name: config
       run: CPPFLAGS='-ansi -D_XOPEN_SOURCE=1 -D_POSIX_C_SOURCE=200809L' ./config --banner=Configured enable-sslkeylog no-asm no-secure-memory no-makedepend enable-buildtest-c++ enable-fips --strict-warnings && perl configdata.pm --dump
     - name: make
@@ -76,7 +91,12 @@ jobs:
   basic_gcc:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - name: Harden Runner
+      uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - name: checkout fuzz/corpora submodule
       run: git submodule update --init --depth 1 fuzz/corpora
     - name: localegen
@@ -99,7 +119,7 @@ jobs:
       run: |
         util/wrap.pl -fips apps/openssl list -providers | grep 'name: CI FIPS Provider for OpenSSL$'
     - name: save artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3.2.1
       with:
         name: "ci@basic-gcc"
         path: artifacts.tar.gz
@@ -107,7 +127,12 @@ jobs:
   basic_clang:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - name: Harden Runner
+      uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - name: checkout fuzz/corpora submodule
       run: git submodule update --init --depth 1 fuzz/corpora
     - name: config
@@ -121,7 +146,7 @@ jobs:
     - name: make test
       run: .github/workflows/make-test
     - name: save artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3.2.1
       with:
         name: "ci@basic-clang"
         path: artifacts.tar.gz
@@ -134,7 +159,12 @@ jobs:
     runs-on: ${{ matrix.os }}-self-hosted
     continue-on-error: true
     steps:
-    - uses: actions/checkout@v4
+    - name: Harden Runner
+      uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - name: config
       run: ./config enable-demos enable-fips enable-ec_nistp_64_gcc_128 enable-md2 enable-rc5 enable-ssl3 enable-ssl3-method enable-trace
     - name: config dump
@@ -146,7 +176,7 @@ jobs:
     - name: make test
       run: .github/workflows/make-test
     - name: save artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3.2.1
       with:
         name: "ci@self-hosted-${{ matrix.os }}"
         path: artifacts.tar.gz
@@ -154,7 +184,12 @@ jobs:
   minimal:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - name: Harden Runner
+      uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - name: checkout fuzz/corpora submodule
       run: git submodule update --init --depth 1 fuzz/corpora
     - name: config
@@ -168,7 +203,7 @@ jobs:
     - name: make test
       run: .github/workflows/make-test
     - name: save artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3.2.1
       with:
         name: "ci@minimal"
         path: artifacts.tar.gz
@@ -176,7 +211,12 @@ jobs:
   no-deprecated:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - name: Harden Runner
+      uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - name: checkout fuzz/corpora submodule
       run: git submodule update --init --depth 1 fuzz/corpora
     - name: config
@@ -190,7 +230,7 @@ jobs:
     - name: make test
       run: .github/workflows/make-test
     - name: save artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3.2.1
       with:
         name: "ci@no-deprecated"
         path: artifacts.tar.gz
@@ -198,7 +238,12 @@ jobs:
   no-shared-ubuntu:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - name: Harden Runner
+      uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - name: checkout fuzz/corpora submodule
       run: git submodule update --init --depth 1 fuzz/corpora
     - name: config
@@ -212,7 +257,7 @@ jobs:
     - name: make test
       run: .github/workflows/make-test
     - name: save artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3.2.1
       with:
         name: "ci@no-shared-ubuntu"
         path: artifacts.tar.gz
@@ -224,7 +269,12 @@ jobs:
         os: [macos-13, macos-14]
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v4
+    - name: Harden Runner
+      uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - name: checkout fuzz/corpora submodule
       run: git submodule update --init --depth 1 fuzz/corpora
     - name: config
@@ -238,7 +288,7 @@ jobs:
     - name: make test
       run: .github/workflows/make-test
     - name: save artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3.2.1
       with:
         name: "ci@no-shared-${{ matrix.os }}"
         path: artifacts.tar.gz
@@ -246,7 +296,12 @@ jobs:
   non-caching:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - name: Harden Runner
+      uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - name: checkout fuzz/corpora submodule
       run: git submodule update --init --depth 1 fuzz/corpora
     - name: Adjust ASLR for sanitizer
@@ -264,7 +319,7 @@ jobs:
     - name: make test
       run: .github/workflows/make-test OPENSSL_TEST_RAND_ORDER=0 TESTS="-test_fuzz* -test_ssl_* -test_sslapi -test_evp -test_cmp_http -test_verify -test_cms -test_store -test_enc -[01][0-9]"
     - name: save artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3.2.1
       with:
         name: "ci@non-caching"
         path: artifacts.tar.gz
@@ -272,7 +327,12 @@ jobs:
   address_ub_sanitizer:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - name: Harden Runner
+      uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - name: checkout fuzz/corpora submodule
       run: git submodule update --init --depth 1 fuzz/corpora
     - name: Adjust ASLR for sanitizer
@@ -290,7 +350,7 @@ jobs:
     - name: make test
       run: .github/workflows/make-test OPENSSL_TEST_RAND_ORDER=0
     - name: save artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3.2.1
       with:
         name: "ci@address_ub_sanitizer"
         path: artifacts.tar.gz
@@ -298,7 +358,12 @@ jobs:
   fuzz_tests:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - name: Harden Runner
+      uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - name: checkout fuzz/corpora submodule
       run: git submodule update --init --depth 1 fuzz/corpora
     - name: Adjust ASLR for sanitizer
@@ -316,7 +381,7 @@ jobs:
     - name: make test
       run: .github/workflows/make-test OPENSSL_TEST_RAND_ORDER=0 TESTS="test_fuzz*"
     - name: save artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3.2.1
       with:
         name: "ci@fuzz_tests"
         path: artifacts.tar.gz
@@ -325,7 +390,12 @@ jobs:
   memory_sanitizer:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - name: Harden Runner
+      uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - name: checkout fuzz/corpora submodule
       run: git submodule update --init --depth 1 fuzz/corpora
     - name: Adjust ASLR for sanitizer
@@ -344,7 +414,7 @@ jobs:
     - name: make test
       run: .github/workflows/make-test OPENSSL_TEST_RAND_ORDER=0
     - name: save artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3.2.1
       with:
         name: "ci@memory_sanitizer"
         path: artifacts.tar.gz
@@ -352,7 +422,12 @@ jobs:
   threads_sanitizer:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - name: Harden Runner
+      uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - name: checkout fuzz/corpora submodule
       run: git submodule update --init --depth 1 fuzz/corpora
     - name: Adjust ASLR for sanitizer
@@ -370,7 +445,7 @@ jobs:
     - name: make test
       run: .github/workflows/make-test V=1 TESTS="test_threads test_internal_provider test_provfetch test_provider test_pbe test_evp_kdf test_pkcs12 test_store test_evp test_quic*"
     - name: save artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3.2.1
       with:
         name: "ci@threads_sanitizer"
         path: artifacts.tar.gz
@@ -378,7 +453,12 @@ jobs:
   enable_non-default_options:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - name: Harden Runner
+      uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - name: checkout fuzz/corpora submodule
       run: git submodule update --init --depth 1 fuzz/corpora
     - name: modprobe tls
@@ -394,7 +474,7 @@ jobs:
     - name: make test
       run: .github/workflows/make-test
     - name: save artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3.2.1
       with:
         name: "ci@enable_non-default_options"
         path: artifacts.tar.gz
@@ -402,7 +482,12 @@ jobs:
   full_featured:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - name: Harden Runner
+      uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - name: checkout fuzz/corpora submodule
       run: git submodule update --init --depth 1 fuzz/corpora
     - name: modprobe tls
@@ -424,7 +509,7 @@ jobs:
     - name: make test
       run: .github/workflows/make-test
     - name: save artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3.2.1
       with:
         name: "ci@full_featured"
         path: artifacts.tar.gz
@@ -432,7 +517,12 @@ jobs:
   no-legacy:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - name: Harden Runner
+      uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - name: checkout fuzz/corpora submodule
       run: git submodule update --init --depth 1 fuzz/corpora
     - name: config
@@ -446,7 +536,7 @@ jobs:
     - name: make test
       run: .github/workflows/make-test
     - name: save artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3.2.1
       with:
         name: "ci@no-legacy"
         path: artifacts.tar.gz
@@ -454,7 +544,12 @@ jobs:
   legacy:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - name: Harden Runner
+      uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - name: checkout fuzz/corpora submodule
       run: git submodule update --init --depth 1 fuzz/corpora
     - name: config
@@ -468,7 +563,7 @@ jobs:
     - name: make test
       run: .github/workflows/make-test
     - name: save artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3.2.1
       with:
         name: "ci@legacy"
         path: artifacts.tar.gz
@@ -481,7 +576,12 @@ jobs:
   out-of-readonly-source-and-install-ubuntu:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - name: Harden Runner
+      uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         path: ./source
     - name: checkout fuzz/corpora submodule
@@ -510,7 +610,7 @@ jobs:
       run: ../source/.github/workflows/make-test
       working-directory: ./build
     - name: save artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3.2.1
       with:
         name: "ci@out-of-readonly-source-and-install-ubuntu"
         path: build/artifacts.tar.gz
@@ -525,7 +625,12 @@ jobs:
         os: [macos-13, macos-14]
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v4
+    - name: Harden Runner
+      uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         path: ./source
     - name: checkout fuzz/corpora submodule
@@ -554,7 +659,7 @@ jobs:
       run: ../source/.github/workflows/make-test
       working-directory: ./build
     - name: save artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3.2.1
       with:
         name: "ci@out-of-readonly-source-and-install-${{ matrix.os }}"
         path: build/artifacts.tar.gz
@@ -565,7 +670,12 @@ jobs:
   external-tests-misc:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - name: Harden Runner
+      uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         submodules: recursive
     - name: package installs
@@ -573,7 +683,7 @@ jobs:
         sudo apt-get update
         sudo apt-get -yq install bison gettext keyutils ldap-utils libldap2-dev libkeyutils-dev python3 python3-paste python3-pyrad slapd tcsh python3-virtualenv virtualenv python3-kdcproxy gdb
     - name: install cpanm and Test2::V0 for gost_engine testing
-      uses: perl-actions/install-with-cpanm@stable
+      uses: perl-actions/install-with-cpanm@a17c30475babbae5b450e29563d536fb22baa83b # stable
       with:
         install: Test2::V0
     - name: setup hostname workaround
@@ -582,7 +692,7 @@ jobs:
       run: ./config --banner=Configured --strict-warnings --debug no-afalgeng enable-rc5 enable-md2 enable-ssl3 enable-ssl3-method enable-weak-ssl-ciphers enable-zlib enable-ec_nistp_64_gcc_128 enable-external-tests no-fips && perl configdata.pm --dump
     - name: make
       run: make -s -j4
-    - uses: dtolnay/rust-toolchain@stable
+    - uses: dtolnay/rust-toolchain@4f647fc679bcd3b11499ccb42104547c83dabe96 # stable
     - name: get cpu info
       run: |
         cat /proc/cpuinfo
@@ -604,7 +714,12 @@ jobs:
   external-tests-providers:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - name: Harden Runner
+      uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         submodules: recursive
     - name: package installs
@@ -633,7 +748,12 @@ jobs:
         PYTHON:
           - 3.9
     steps:
-    - uses: actions/checkout@v4
+    - name: Harden Runner
+      uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         submodules: recursive
     - name: Configure OpenSSL
@@ -641,10 +761,10 @@ jobs:
     - name: make
       run: make -s -j4
     - name: Setup Python
-      uses: actions/setup-python@v5.3.0
+      uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
       with:
         python-version: ${{ matrix.PYTHON }}
-    - uses: dtolnay/rust-toolchain@master
+    - uses: dtolnay/rust-toolchain@315e265cd78dad1e1dcf3a5074f6d6c47029d5aa # master
       with:
         toolchain: ${{ matrix.RUST }}
     - name: get cpu info

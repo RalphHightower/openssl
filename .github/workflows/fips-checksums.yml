@@ -15,6 +15,11 @@ jobs:
   compute-checksums:
     runs-on: ubuntu-latest
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+        with:
+          egress-policy: audit
+
       - name: install unifdef
         run: |
             sudo apt-get update
@@ -26,7 +31,7 @@ jobs:
           mkdir ./build
           mkdir ./source
           mkdir ./artifact
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           repository: ${{ github.event.pull_request.base.repo.full_name }}
           ref: ${{ github.event.pull_request.base.ref }}
@@ -43,7 +48,7 @@ jobs:
       - name: make fips-checksums pristine
         run: make fips-checksums
         working-directory: ./build-pristine
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           path: source
       - name: config
@@ -69,7 +74,7 @@ jobs:
       - name: save PR number
         run: echo ${{ github.event.number }} > ./artifact/pr_num
       - name: save artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3.2.1
         with:
           name: fips_checksum
           path: artifact/
@@ -79,6 +84,11 @@ jobs:
     env:
       BUILD_OPTS: -g --strict-warnings enable-ktls enable-fips enable-egd enable-ec_nistp_64_gcc_128 enable-md2 enable-rc5 enable-sctp enable-ssl3 enable-ssl3-method enable-trace enable-zlib enable-zstd
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+        with:
+          egress-policy: audit
+
       - name: create build dirs
         run: |
           mkdir ./build-pristine
@@ -88,7 +98,7 @@ jobs:
           mkdir ./artifact
       - name: install extra config support
         run: sudo apt-get -y install libsctp-dev abigail-tools libzstd-dev zstd
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           repository: ${{ github.event.pull_request.base.repo.full_name }}
           ref: ${{ github.event.pull_request.base.ref }}
@@ -99,7 +109,7 @@ jobs:
       - name: make pristine
         run: make -s -j4
         working-directory: ./build-pristine
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           path: source
       - name: config
@@ -113,7 +123,7 @@ jobs:
       - name: save PR number
         run: echo ${{ github.event.number }} > ./artifact/pr_num
       - name: save artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3.2.1
         with:
           name: abidiff
           path: artifact/

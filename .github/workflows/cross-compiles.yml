@@ -152,6 +152,11 @@ jobs:
         ]
     runs-on: ubuntu-latest
     steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@0080882f6c36860b6ba35c610c98ce87d4e2f26f # v2.10.2
+      with:
+        egress-policy: audit
+
     - name: install package repository
       if: matrix.platform.ppa != ''
       run: |
@@ -162,7 +167,7 @@ jobs:
         sudo apt-get -yq --force-yes install \
             gcc-${{ matrix.platform.arch }} \
             ${{ matrix.platform.libs }}
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
     - name: checkout fuzz/corpora submodule
       run: git submodule update --init --depth 1 fuzz/corpora
 
@@ -219,7 +224,7 @@ jobs:
                   TESTS="test_evp*" \
                   QEMU_LD_PREFIX=/usr/${{ matrix.platform.arch }}
     - name: save artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3.2.1
       with:
         name: "cross-compiles@${{ matrix.platform.arch }}"
         path: artifacts.tar.gz
