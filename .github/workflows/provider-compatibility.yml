@@ -217,7 +217,6 @@ jobs:
             exit 1;                                                         \
           fi
         continue-on-error: true
-
       - uses: actions/download-artifact@v4.1.8
         if: steps.early_exit.outcome == 'success'
         with:
@@ -225,7 +224,6 @@ jobs:
       - name: unpack first build
         if: steps.early_exit.outcome == 'success'
         run: tar xzf "${{ matrix.tree_a }}.tar.gz"
-
       - uses: actions/download-artifact@v4.1.8
         if: steps.early_exit.outcome == 'success'
         with:
