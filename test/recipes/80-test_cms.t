@@ -52,7 +52,7 @@ my ($no_des, $no_dh, $no_dsa, $no_ec, $no_ec2m, $no_rc2, $no_zlib)
 
 $no_rc2 = 1 if disabled("legacy");
 
-plan tests => 25;
+plan tests => 27;
 
 ok(run(test(["pkcs7_test"])), "test pkcs7");
 
@@ -1065,6 +1065,46 @@ subtest "CMS signed digest, DER format" => sub {
        "Verify CMS signed digest, DER format");
 };
 
+subtest "CMS signed digest, DER format, no signing time" => sub {
+    # This test also enables CAdES mode and disables S/MIME capabilities
+    # to approximate the kind of signature required for a PAdES-compliant
+    # PDF signature.
+    plan tests => 4;
+
+    # Pre-computed SHA256 digest of $smcont in hexadecimal form
+    my $digest = "ff236ef61b396355f75a4cc6e1c306d4c309084ae271a9e2ad6888f10a101b32";
+
+    my $sig_file = "signature.der";
+    ok(run(app(["openssl", "cms", @prov, "-sign", "-digest", $digest,
+                    "-outform", "DER",
+                    "-no_signing_time",
+                    "-nosmimecap",
+                    "-cades",
+                    "-certfile", catfile($smdir, "smroot.pem"),
+                    "-signer", catfile($smdir, "smrsa1.pem"),
+                    "-out", $sig_file])),
+        "CMS sign pre-computed digest, DER format, no signing time");
+
+    my $exit = 0;
+    my $dump = join "\n",
+               run(app(["openssl", "cms", @prov, "-cmsout", "-noout", "-print",
+                            "-in", $sig_file,
+                            "-inform", "DER"]),
+                   capture => 1,
+                   statusvar => $exit);
+
+    is($exit, 0, "Parse CMS signed digest, DER format, no signing time");
+    is(index($dump, 'signingTime'), -1,
+        "Check that CMS signed digest does not contain signing time");
+
+    ok(run(app(["openssl", "cms", @prov, "-verify", "-in", $sig_file,
+                    "-inform", "DER",
+                    "-CAfile", catfile($smdir, "smroot.pem"),
+                    "-content", $smcont])),
+       "Verify CMS signed digest, DER format, no signing time");
+};
+
+
 subtest "CMS signed digest, S/MIME format" => sub {
     plan tests => 2;
 
@@ -1227,6 +1267,22 @@ ok(!run(app(['openssl', 'cms', '-verify',
                                 "SignedInvalidMappingFromanyPolicyTest7.eml")
             ])),
    "issue#19643");
+
+# Check that kari encryption with originator does not segfault
+with({ exit_checker => sub { return shift == 3; } },
+  sub {
+    SKIP: {
+      skip "EC is not supported in this build", 1 if $no_ec;
+
+      ok(run(app(['openssl', 'cms', '-encrypt',
+                  '-in', srctop_file("test", "smcont.txt"), '-aes128',
+                  '-recip', catfile($smdir, "smec1.pem"),
+                  '-originator', catfile($smdir, "smec3.pem"),
+                  '-inkey', catfile($smdir, "smec3.pem")
+                ])),
+          "Check failure for currently not supported kari encryption with static originator");
+    }
+  });
 
 # Check that we get the expected failure return code
 with({ exit_checker => sub { return shift == 6; } },
