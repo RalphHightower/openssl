@@ -1,5 +1,5 @@
 /*
- * Copyright 1995-2024 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2025 The OpenSSL Project Authors. All Rights Reserved.
  * Copyright (c) 2002, Oracle and/or its affiliates. All rights reserved
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
@@ -1817,9 +1817,9 @@ static void collect_kem(EVP_KEM *kem, void *stack)
     STACK_OF(EVP_KEM) *kem_stack = stack;
 
     if (is_kem_fetchable(kem)
-            && sk_EVP_KEM_push(kem_stack, kem) > 0) {
-        EVP_KEM_up_ref(kem);
-    }
+            && EVP_KEM_up_ref(kem)
+            && sk_EVP_KEM_push(kem_stack, kem) <= 0)
+        EVP_KEM_free(kem); /* up-ref successful but push to stack failed */
 }
 
 static int kem_locate(const char *algo, unsigned int *idx)
@@ -1849,8 +1849,9 @@ static void collect_signatures(EVP_SIGNATURE *sig, void *stack)
     STACK_OF(EVP_SIGNATURE) *sig_stack = stack;
 
     if (is_signature_fetchable(sig)
-            && sk_EVP_SIGNATURE_push(sig_stack, sig) > 0)
-        EVP_SIGNATURE_up_ref(sig);
+            && EVP_SIGNATURE_up_ref(sig)
+            && sk_EVP_SIGNATURE_push(sig_stack, sig) <= 0)
+        EVP_SIGNATURE_free(sig); /* up-ref successful but push to stack failed */
 }
 
 static int sig_locate(const char *algo, unsigned int *idx)
@@ -2999,7 +3000,7 @@ int speed_main(int argc, char **argv)
 
                     if (!ae_mode) {
                         if (!EVP_CipherInit_ex(loopargs[k].ctx, NULL, NULL,
-                                               loopargs[k].key, NULL, -1)) {
+                                               loopargs[k].key, iv, -1)) {
                             BIO_printf(bio_err, "\nFailed to set the key\n");
                             dofail();
                             exit(1);

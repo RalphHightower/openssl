@@ -1,5 +1,5 @@
 #! /usr/bin/env perl
-# Copyright 2015-2024 The OpenSSL Project Authors. All Rights Reserved.
+# Copyright 2015-2025 The OpenSSL Project Authors. All Rights Reserved.
 #
 # Licensed under the Apache License 2.0 (the "License").  You may not use
 # this file except in compliance with the License.  You can obtain a copy
@@ -16,7 +16,7 @@ use OpenSSL::Test qw/:DEFAULT srctop_file/;
 
 setup("test_x509");
 
-plan tests => 126;
+plan tests => 134;
 
 # Prevent MSys2 filename munging for arguments that look like file paths but
 # aren't
@@ -41,6 +41,18 @@ ok(run(app(["openssl", "x509", "-text", "-in", $pem, "-out", $out_utf8,
             "-nameopt", "utf8"])));
 is(cmp_text($out_utf8, $utf),
    0, 'Comparing utf8 output with cyrillic.utf8');
+
+SKIP: {
+    skip "EdDSA disabled", 2 if disabled("ecx");
+
+    $pem = srctop_file(@certs, "tab-in-dn.pem");
+    my $out_text = "out-tab-in-dn.text";
+    my $text = srctop_file(@certs, "tab-in-dn.text");
+    ok(run(app(["openssl", "x509", "-text", "-noout",
+            "-in", $pem, "-out", $out_text])));
+    is(cmp_text($out_text, $text),
+       0, 'Comparing default output with tab-in-dn.text');
+}
 
 SKIP: {
     skip "DES disabled", 1 if disabled("des");
@@ -400,6 +412,7 @@ cert_contains($attr_map_cert,
 cert_contains($attr_map_cert,
               "commonName:asdf == localityName:03:3E",
               1, 'X.509 Attribute Mappings');
+
 my $aaa_cert = srctop_file(@certs, "ext-allowedAttributeAssignments.pem");
 cert_contains($aaa_cert,
               "Attribute Type: commonName",
@@ -407,6 +420,26 @@ cert_contains($aaa_cert,
 cert_contains($aaa_cert,
               "Holder Domain: email:jonathan.wilbur",
               1, 'X.509 Allowed Attribute Assignments');
+
+my $aa_idp_cert = srctop_file(@certs, "ext-aAissuingDistributionPoint.pem");
+cert_contains($aa_idp_cert,
+              "DirName:CN = Wildboar",
+              1, 'X.509 Attribute Authority Issuing Distribution Point');
+cert_contains($aa_idp_cert,
+              "CA Compromise",
+              1, 'X.509 Attribute Authority Issuing Distribution Point');
+cert_contains($aa_idp_cert,
+              "Indirect CRL: TRUE",
+              1, 'X.509 Attribute Authority Issuing Distribution Point');
+cert_contains($aa_idp_cert,
+              "Contains User Attribute Certificates: TRUE",
+              1, 'X.509 Attribute Authority Issuing Distribution Point');
+cert_contains($aa_idp_cert,
+              "Contains Attribute Authority \\(AA\\) Certificates: TRUE",
+              1, 'X.509 Attribute Authority Issuing Distribution Point');
+cert_contains($aa_idp_cert,
+              "Contains Source Of Authority \\(SOA\\) Public Key Certificates: TRUE",
+              1, 'X.509 Attribute Authority Issuing Distribution Point');
 
 sub test_errors { # actually tests diagnostics of OSSL_STORE
     my ($expected, $cert, @opts) = @_;

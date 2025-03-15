@@ -28,20 +28,122 @@ OpenSSL Releases
 OpenSSL 3.5
 -----------
 
+### Changes between 3.5 and 3.6 [xx XXX xxxx]
+
+ * none yet
+
 ### Changes between 3.4 and 3.5 [xx XXX xxxx]
 
-* All the BIO_meth_get_*() functions allowing reuse of the internal OpenSSL
-  BIO method implementations were deprecated. The reuse is unsafe due to
-  dependency on the code of the internal methods not changing.
+* Added server side support for QUIC
 
-  *Tomáš Mráz*
+   *Hugo Landau, Matt Caswell, Tomáš Mráz, Neil Horman, Sasha Nedvedicky, Andrew Dinh*
 
-* Support DEFAULT keyword and '-' prefix in SSL_CTX_set1_groups_list().
-  SSL_CTX_set1_groups_list() now supports the DEFAULT keyword which sets the
-  available groups to the default selection. The '-' prefix allows the calling
-  application to remove a group from the selection.
+ * Added a `no-tls-deprecated-ec` configuration option.
 
-  *Frederik Wedel-Heinen*
+   The `no-tls-deprecated-ec` option disables support for TLS elliptic curve
+   groups deprecated in RFC8422 at compile time.  This does not affect use of
+   the associated curves outside TLS.  By default support for these groups is
+   compiled in, but, as before, they are not included in the default run-time
+   list of supported groups.
+
+   With the `enable-tls-deprecated-ec` option these TLS groups remain enabled at
+   compile time even if the default configuration is changed, provided the
+   underlying EC curves remain implemented.
+
+   *Viktor Dukhovni*
+
+ * Added new API to enable 0-RTT for 3rd party QUIC stacks.
+
+   *Cheng Zhang*
+
+ * Added support for a new callback registration `SSL_CTX_set_new_pending_conn_cb`,
+   which allows for application notification of new connection SSL object
+   creation, which occurs independently of calls to `SSL_accept_connection()`.
+   Note: QUIC objects passed through SSL callbacks should not have their state
+   mutated via calls back into the SSL api until such time as they have been
+   received via a call to `SSL_accept_connection()`.
+
+   *Neil Horman*
+
+ * Add SLH-DSA as specified in FIPS 205.
+
+   *Shane Lontis and Dr Paul Dale*
+
+ * ML-KEM as specified in FIPS 203.
+
+   Based on the original implementation in BoringSSL, ported from C++ to C,
+   refactored, and integrated into the OpenSSL default and FIPS providers.
+   Including also the X25519MLKEM768, SecP256r1MLKEM768, SecP384r1MLKEM1024
+   TLS hybrid key post-quantum/classical key agreement schemes.
+
+   *Michael Baentsch, Viktor Dukhovni, Shane Lontis and Paul Dale*
+
+ * Add ML-DSA as specified in FIPS 204.
+
+   The base code was derived from BoringSSL C++ code.
+
+   *Shane Lontis, Viktor Dukhovni and Paul Dale*
+
+ * Added new API calls to enable 3rd party QUIC stacks to use the OpenSSL TLS
+   implementation.
+
+   *Matt Caswell*
+
+ * The default DRBG implementations have been changed to prefer to fetch
+   algorithm implementations from the default provider (the provider the
+   DRBG implementation is built in) regardless of the default properties
+   set in the configuration file. The code will still fallback to find
+   an implementation, as done previously, if needed.
+
+   *Simo Sorce*
+
+ * Initial support for opaque symmetric keys objects.  These replace the ad-hoc byte
+   arrays that are pervasive throughout the library.
+
+   *Dmitry Belyavskiy and Simo Sorce*
+
+ * For TLSv1.3: Add capability for a client to send multiple key shares. Extend the scope of
+   `SSL_OP_CIPHER_SERVER_PREFERENCE` to cover server-side key exchange group selection.
+   Extend the server-side key exchange group selection algorithm and related group list syntax
+   to support multiple group priorities, e.g. to prioritize (hybrid-)KEMs.
+
+   *David Kelsey*, *Martin Schmatz*
+
+ * The default TLS group list setting is now set to:
+   `?*X25519MLKEM768 / ?*X25519:?secp256r1 / ?X448:?secp384r1:?secp521r1 / ?ffdhe2048:?ffdhe3072`
+
+   This means two key shares (X25519MLKEM768 and X25519) will be sent by
+   default by the TLS client. GOST groups and FFDHE groups larger than 3072
+   bits are no longer enabled by default.
+
+   *Viktor Dukhovni*
+
+ * A new random generation API has been introduced which modifies all
+   of the L<RAND_bytes(3)> family of calls so they are routed through a
+   specific named provider instead of being resolved via the normal DRBG
+   chaining.  In a future OpenSSL release, this will obsolete RAND_METHOD.
+
+   *Dr Paul Dale*
+
+ * New inline functions were added to support loads and stores of unsigned
+   16-bit, 32-bit and 64-bit integers in either little-endian or big-endian
+   form, regardless of the host byte-order.  See the `OPENSSL_load_u16_le(3)`
+   manpage for details.
+
+   *Viktor Dukhovni*
+
+ * All the `BIO_meth_get_*()` functions allowing reuse of the internal OpenSSL
+   BIO method implementations were deprecated. The reuse is unsafe due to
+   dependency on the code of the internal methods not changing.
+
+   *Tomáš Mráz*
+
+ * Support DEFAULT keyword and '-' prefix in `SSL_CTX_set1_groups_list()`.
+   `SSL_CTX_set1_groups_list()` now supports the DEFAULT keyword which sets the
+   available groups to the default selection. The '-' prefix allows the calling
+   application to remove a group from the selection.
+
+   *Frederik Wedel-Heinen*
 
  * Updated the default encryption cipher for the `req`, `cms`, and `smime` applications
    from `des-ede3-cbc` to `aes-256-cbc`.
@@ -51,7 +153,7 @@ OpenSSL 3.5
    *Aditya*
 
  * Enhanced PKCS#7 inner contents verification.
-   In the PKCS7_verify() function, the BIO *indata parameter refers to the
+   In the `PKCS7_verify()` function, the BIO *indata parameter refers to the
    signed data if the content is detached from p7. Otherwise, indata should be
    NULL, and then the signed data must be in p7.
 
@@ -69,6 +171,20 @@ OpenSSL 3.5
    The `-digest` and `-rawin` option may only be given with `-sign` or `verify`.
 
    *David von Oheimb*
+
+ * `X509_PURPOSE_add()` has been modified
+   to take `sname` instead of `id` as the primary purpose identifier.
+   For its convenient use, `X509_PURPOSE_get_unused_id()` has been added.
+
+   This work was sponsored by Siemens AG.
+
+   *David von Oheimb*
+
+ * Added support for central key generation in CMP.
+
+   This work was sponsored by Siemens AG.
+
+   *Rajeev Ranjan*
 
  * Optionally allow the FIPS provider to use the `JITTER` entropy source.
    Note that using this option will require the resulting FIPS provider
@@ -107,10 +223,74 @@ OpenSSL 3.5
 
    *Juhász Péter*
 
+ * Parallel dual-prime 1024/1536/2048-bit modular exponentiation for
+   AVX_IFMA capable processors (Intel Sierra Forest and its successor).
+
+   This optimization brings performance enhancement, ranging from 1.8 to 2.2
+   times, for the sign/decryption operations of rsaz-2k/3k/4k (`openssl speed rsa`)
+   on the Intel Sierra Forest.
+
+   *Zhiguo Zhou, Wangyang Guo (Intel Corp)*
+
+ * VAES/AVX-512 support for AES-XTS.
+
+   For capable processors (>= Intel Icelake), this provides a
+   vectorized implementation of AES-XTS with a throughput improvement
+   between 1.3x to 2x, depending on the block size.
+
+   *Pablo De Lara Guarch, Dan Pittman*
+
+ * Fix EVP_DecodeUpdate(): do not write padding zeros to the decoded output.
+
+   According to the documentation,
+   for every 4 valid base64 bytes processed (ignoring whitespace, carriage returns and line feeds),
+   EVP_DecodeUpdate() produces 3 bytes of binary output data
+   (except at the end of data terminated with one or two padding characters).
+   However, the function behaved like an EVP_DecodeBlock():
+   produces exactly 3 output bytes for every 4 input bytes.
+   Such behaviour could cause writes to a non-allocated output buffer
+   if a user allocates its size based on the documentation and knowing the padding size.
+
+   The fix makes EVP_DecodeUpdate() produce
+   exactly as many output bytes as in the initial non-encoded message.
+
+   *Valerii Krygin*
+
 OpenSSL 3.4
 -----------
 
-### Changes between 3.4.0 and 3.4.1 [xx XXX xxxx]
+### Changes between 3.4.1 and 3.4.2 [xx XXX xxxx]
+
+ * When displaying distinguished names in the openssl application escape control
+   characters by default.
+
+   *Tomáš Mráz*
+
+### Changes between 3.4.0 and 3.4.1 [11 Feb 2025]
+
+ * Fixed RFC7250 handshakes with unauthenticated servers don't abort as expected.
+
+   Clients using RFC7250 Raw Public Keys (RPKs) to authenticate a
+   server may fail to notice that the server was not authenticated, because
+   handshakes don't abort as expected when the SSL_VERIFY_PEER verification mode
+   is set.
+
+   ([CVE-2024-12797])
+
+   *Viktor Dukhovni*
+
+ * Fixed timing side-channel in ECDSA signature computation.
+
+   There is a timing signal of around 300 nanoseconds when the top word of
+   the inverted ECDSA nonce value is zero. This can happen with significant
+   probability only for some of the supported elliptic curves. In particular
+   the NIST P-521 curve is affected. To be able to measure this leak, the
+   attacker process must either be located in the same physical computer or
+   must have a very fast network connection with low latency.
+
+   ([CVE-2024-13176])
+
+   *Tomáš Mráz*
 
  * Reverted the behavior change of CMS_get1_certs() and CMS_get1_crls()
    that happened in the 3.4.0 release. These functions now return NULL
@@ -253,7 +433,9 @@ OpenSSL 3.4
 
    *Rajeev Ranjan*
 
- * Added support for requesting CRL in CMP.
+ * Added support for retrieving certificate request templates and CRLs in CMP,
+   with the respective CLI options `-template`,
+   `-crlcert`, `-oldcrl`, `-crlout`, `-crlform>`, and `-rsp_crl`.
 
    This work was sponsored by Siemens AG.
 
@@ -458,6 +640,8 @@ OpenSSL 3.3
  * Added several new features of CMPv3 defined in RFC 9480 and RFC 9483:
    - `certProfile` request message header and respective `-profile` CLI option
    - support for delayed delivery of all types of response messages
+
+   This work was sponsored by Siemens AG.
 
    *David von Oheimb*
 
@@ -764,11 +948,6 @@ OpenSSL 3.2
 
    *Fergus Dall*
 
- * Added support for securely getting root CA certificate update in
-   CMP.
-
-   *David von Oheimb*
-
  * Improved contention on global write locks by using more read locks where
    appropriate.
 
@@ -1034,8 +1213,11 @@ OpenSSL 3.2
    *David von Oheimb*
 
  * Various fixes and extensions to the CMP+CRMF implementation and the `cmp` app
-   in particular supporting requests for central key generation, generalized
-   polling, and various types of genm/genp exchanges defined in CMP Updates.
+   in particular supporting various types of genm/genp exchanges such as getting
+   CA certificates and root CA cert updates defined in CMP Updates [RFC 9480],
+   as well as the `-srvcertout` and `-serial` CLI options.
+
+   This work was sponsored by Siemens AG.
 
    *David von Oheimb*
 
@@ -20971,6 +21153,7 @@ ndif
 
 <!-- Links -->
 
+[CVE-2024-13176]: https://www.openssl.org/news/vulnerabilities.html#CVE-2024-13176
 [CVE-2024-9143]: https://www.openssl.org/news/vulnerabilities.html#CVE-2024-9143
 [CVE-2024-6119]: https://www.openssl.org/news/vulnerabilities.html#CVE-2024-6119
 [CVE-2024-5535]: https://www.openssl.org/news/vulnerabilities.html#CVE-2024-5535

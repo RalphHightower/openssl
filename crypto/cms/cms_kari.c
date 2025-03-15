@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2021 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2013-2025 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -405,7 +405,9 @@ int ossl_cms_RecipientInfo_kari_init(CMS_RecipientInfo *ri,  X509 *recip,
             return 0;
     }
 
-    EVP_PKEY_up_ref(recipPubKey);
+    if (!EVP_PKEY_up_ref(recipPubKey))
+        return 0;
+
     rek->pkey = recipPubKey;
     return 1;
 }

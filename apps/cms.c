@@ -1,5 +1,5 @@
 /*
- * Copyright 2008-2024 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2008-2025 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -511,13 +511,15 @@ int cms_main(int argc, char **argv)
             if (rr_from == NULL
                 && (rr_from = sk_OPENSSL_STRING_new_null()) == NULL)
                 goto end;
-            sk_OPENSSL_STRING_push(rr_from, opt_arg());
+            if (sk_OPENSSL_STRING_push(rr_from, opt_arg()) <= 0)
+                goto end;
             break;
         case OPT_RR_TO:
             if (rr_to == NULL
                 && (rr_to = sk_OPENSSL_STRING_new_null()) == NULL)
                 goto end;
-            sk_OPENSSL_STRING_push(rr_to, opt_arg());
+            if (sk_OPENSSL_STRING_push(rr_to, opt_arg()) <= 0)
+                goto end;
             break;
         case OPT_PRINT:
             noout = print = 1;
@@ -594,13 +596,15 @@ int cms_main(int argc, char **argv)
                 if (sksigners == NULL
                     && (sksigners = sk_OPENSSL_STRING_new_null()) == NULL)
                     goto end;
-                sk_OPENSSL_STRING_push(sksigners, signerfile);
+                if (sk_OPENSSL_STRING_push(sksigners, signerfile) <= 0)
+                    goto end;
                 if (keyfile == NULL)
                     keyfile = signerfile;
                 if (skkeys == NULL
                     && (skkeys = sk_OPENSSL_STRING_new_null()) == NULL)
                     goto end;
-                sk_OPENSSL_STRING_push(skkeys, keyfile);
+                if (sk_OPENSSL_STRING_push(skkeys, keyfile) <= 0)
+                    goto end;
                 keyfile = NULL;
             }
             signerfile = opt_arg();
@@ -618,12 +622,14 @@ int cms_main(int argc, char **argv)
                 if (sksigners == NULL
                     && (sksigners = sk_OPENSSL_STRING_new_null()) == NULL)
                     goto end;
-                sk_OPENSSL_STRING_push(sksigners, signerfile);
+                if (sk_OPENSSL_STRING_push(sksigners, signerfile) <= 0)
+                    goto end;
                 signerfile = NULL;
                 if (skkeys == NULL
                     && (skkeys = sk_OPENSSL_STRING_new_null()) == NULL)
                     goto end;
-                sk_OPENSSL_STRING_push(skkeys, keyfile);
+                if (sk_OPENSSL_STRING_push(skkeys, keyfile) <= 0)
+                    goto end;
             }
             keyfile = opt_arg();
             break;
@@ -677,7 +683,8 @@ int cms_main(int argc, char **argv)
                     key_param->next = nparam;
                 key_param = nparam;
             }
-            sk_OPENSSL_STRING_push(key_param->param, opt_arg());
+            if (sk_OPENSSL_STRING_push(key_param->param, opt_arg()) <= 0)
+                goto end;
             break;
         case OPT_V_CASES:
             if (!opt_verify(o, vpm))
@@ -723,7 +730,6 @@ int cms_main(int argc, char **argv)
     }
 
     /* Remaining args are files to process. */
-    argc = opt_num_rest();
     argv = opt_rest();
 
     if ((rr_allorfirst != -1 || rr_from != NULL) && rr_to == NULL) {
@@ -764,12 +770,14 @@ int cms_main(int argc, char **argv)
             if (sksigners == NULL
                 && (sksigners = sk_OPENSSL_STRING_new_null()) == NULL)
                 goto end;
-            sk_OPENSSL_STRING_push(sksigners, signerfile);
+            if (sk_OPENSSL_STRING_push(sksigners, signerfile) <= 0)
+                goto end;
             if (skkeys == NULL && (skkeys = sk_OPENSSL_STRING_new_null()) == NULL)
                 goto end;
             if (keyfile == NULL)
                 keyfile = signerfile;
-            sk_OPENSSL_STRING_push(skkeys, keyfile);
+            if (sk_OPENSSL_STRING_push(skkeys, keyfile) <= 0)
+                goto end;
         }
         if (sksigners == NULL) {
             BIO_printf(bio_err, "No signer certificate specified\n");

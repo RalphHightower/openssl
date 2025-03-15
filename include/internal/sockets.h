@@ -1,5 +1,5 @@
 /*
- * Copyright 1995-2024 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2025 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -12,6 +12,7 @@
 # pragma once
 
 # include <openssl/opensslconf.h>
+# include "internal/common.h"
 
 # if defined(OPENSSL_SYS_VXWORKS) || defined(OPENSSL_SYS_UEFI)
 #  define NO_SYS_PARAM_H
@@ -97,7 +98,6 @@ typedef size_t socklen_t;        /* Currently appears to be missing on VMS */
 #   include <in.h>
 #   include <inet.h>
 #  else
-#   include <poll.h>
 #   include <sys/socket.h>
 #   if !defined(NO_SYS_UN_H) && defined(AF_UNIX) && !defined(OPENSSL_NO_UNIX_SOCK)
 #    include <sys/un.h>

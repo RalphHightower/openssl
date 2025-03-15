@@ -1,4 +1,4 @@
-# Copyright 2021-2024 The OpenSSL Project Authors. All Rights Reserved.
+# Copyright 2021-2025 The OpenSSL Project Authors. All Rights Reserved.
 #
 # Licensed under the Apache License 2.0 (the "License").  You may not use
 # this file except in compliance with the License.  You can obtain a copy
@@ -126,13 +126,8 @@ jobs:
         name: "ci@basic-clang"
         path: artifacts.tar.gz
 
-  self-hosted:
-    if: github.repository == 'openssl/openssl'
-    strategy:
-      matrix:
-        os: [freebsd-13.2, ubuntu-arm64-22.04]
-    runs-on: ${{ matrix.os }}-self-hosted
-    continue-on-error: true
+  linux-arm64:
+    runs-on: ${{ github.repository == 'openssl/openssl' && 'linux-arm64' || 'ubuntu-24.04-arm' }}
     steps:
     - uses: actions/checkout@v4
     - name: config
@@ -142,13 +137,56 @@ jobs:
     - name: make
       run: make -j4
     - name: get cpu info
-      run: ./util/opensslwrap.sh version -c
+      run: |
+        cat /proc/cpuinfo
+        ./util/opensslwrap.sh version -c
     - name: make test
       run: .github/workflows/make-test
     - name: save artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: "ci@self-hosted-${{ matrix.os }}"
+        name: "ci@linux-arm64"
+        path: artifacts.tar.gz
+
+  freebsd-x86_64:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: config
+      uses: cross-platform-actions/action@v0.26.0
+      with:
+        operating_system: freebsd
+        version: "13.4"
+        shutdown_vm: false
+        run: |
+          sudo pkg install -y gcc perl5
+          ./config enable-fips enable-ec_nistp_64_gcc_128 enable-md2 enable-rc5 enable-ssl3 enable-ssl3-method enable-trace
+    - name: config dump
+      uses: cross-platform-actions/action@v0.26.0
+      with:
+        operating_system: freebsd
+        version: "13.4"
+        shutdown_vm: false
+        run: ./configdata.pm --dump
+    - name: make
+      uses: cross-platform-actions/action@v0.26.0
+      with:
+        operating_system: freebsd
+        version: "13.4"
+        shutdown_vm: false
+        run: make -j4
+    - name: make test
+      uses: cross-platform-actions/action@v0.26.0
+      with:
+        operating_system: freebsd
+        version: "13.4"
+        run: |
+          ./util/opensslwrap.sh version -c
+          .github/workflows/make-test
+    - name: save artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: "ci@BSD-x86_64"
         path: artifacts.tar.gz
 
   minimal:
@@ -334,7 +372,7 @@ jobs:
         sudo sysctl -w vm.mmap_rnd_bits=28
     - name: config
       # --debug -O1 is to produce a debug build that runs in a reasonable amount of time
-      run: CC=clang ./config --banner=Configured --debug no-shared -O1 -fsanitize=memory -DOSSL_SANITIZE_MEMORY -fno-optimize-sibling-calls enable-rc5 enable-md2 enable-ec_nistp_64_gcc_128 enable-fips && perl configdata.pm --dump
+      run: CC=clang ./config --banner=Configured --debug no-shared -O1 -fsanitize=memory -DOSSL_SANITIZE_MEMORY -fno-optimize-sibling-calls enable-rc5 enable-md2 enable-ec_nistp_64_gcc_128 enable-fips no-slh-dsa && perl configdata.pm --dump
     - name: make
       run: make -s -j4
     - name: get cpu info
@@ -360,7 +398,7 @@ jobs:
         sudo cat /proc/sys/vm/mmap_rnd_bits
         sudo sysctl -w vm.mmap_rnd_bits=28
     - name: config
-      run: CC=clang ./config --banner=Configured no-fips --strict-warnings -fsanitize=thread && perl configdata.pm --dump
+      run: CC=clang ./config --banner=Configured no-shared no-fips --strict-warnings -g -fsanitize=thread && perl configdata.pm --dump
     - name: make
       run: make -s -j4
     - name: get cpu info
@@ -368,7 +406,7 @@ jobs:
         cat /proc/cpuinfo
         ./util/opensslwrap.sh version -c
     - name: make test
-      run: .github/workflows/make-test V=1 TESTS="test_threads test_internal_provider test_provfetch test_provider test_pbe test_evp_kdf test_pkcs12 test_store test_evp test_quic*"
+      run: .github/workflows/make-test V=1 TESTS="test_lhash test_threads test_internal_provider test_provfetch test_provider test_pbe test_evp_kdf test_pkcs12 test_store test_evp test_quic*"
     - name: save artifacts
       uses: actions/upload-artifact@v4
       with:
@@ -410,7 +448,7 @@ jobs:
     - name: Enable sctp
       run: sudo modprobe sctp
     - name: Enable auth in sctp
-      run: sudo sysctl -w net.sctp.auth_enable=1 
+      run: sudo sysctl -w net.sctp.auth_enable=1
     - name: install extra config support
       run: sudo apt-get -y install libsctp-dev abigail-tools libzstd-dev zstd
     - name: config
@@ -621,8 +659,9 @@ jobs:
         ./util/opensslwrap.sh version -c
     - name: test external oqs-provider
       run: make test TESTS="test_external_oqsprovider"
-    - name: test external pkcs11-provider
-      run: make test TESTS="test_external_pkcs11_provider" VERBOSE=1
+    # Disabled temporarily: https://github.com/latchset/pkcs11-provider/pull/525#discussion_r1982805969
+    # - name: test external pkcs11-provider
+    #   run: make test TESTS="test_external_pkcs11_provider" VERBOSE=1
 
   external-tests-pyca:
     runs-on: ubuntu-latest

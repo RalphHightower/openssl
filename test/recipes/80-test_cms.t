@@ -1,5 +1,5 @@
 #! /usr/bin/env perl
-# Copyright 2015-2024 The OpenSSL Project Authors. All Rights Reserved.
+# Copyright 2015-2025 The OpenSSL Project Authors. All Rights Reserved.
 #
 # Licensed under the Apache License 2.0 (the "License").  You may not use
 # this file except in compliance with the License.  You can obtain a copy
@@ -52,7 +52,7 @@ my ($no_des, $no_dh, $no_dsa, $no_ec, $no_ec2m, $no_rc2, $no_zlib)
 
 $no_rc2 = 1 if disabled("legacy");
 
-plan tests => 27;
+plan tests => 28;
 
 ok(run(test(["pkcs7_test"])), "test pkcs7");
 
@@ -351,6 +351,16 @@ my @smime_cms_tests = (
       [ "{cmd2}", @prov, "-decrypt", "-in", "{output}.cms", "-out", "{output}.txt",
         "-inform", "PEM",
         "-secretkey", "000102030405060708090A0B0C0D0E0F" ],
+      \&final_compare
+    ],
+
+    [ "enveloped content test streaming PEM format, AES-128-CBC cipher, password",
+      [ "{cmd1}", @prov, "-encrypt", "-in", $smcont, "-outform", "PEM", "-aes128",
+        "-stream", "-out", "{output}.cms",
+        "-pwri_password", "test" ],
+      [ "{cmd2}", @prov, "-decrypt", "-in", "{output}.cms", "-out", "{output}.txt",
+        "-inform", "PEM",
+        "-pwri_password", "test" ],
       \&final_compare
     ],
 
@@ -1366,4 +1376,25 @@ subtest "encrypt to three recipients with RSA-OAEP, key only decrypt" => sub {
 	       ])),
        "decrypt with key only");
     is(compare($pt, $ptpt), 0, "compare original message with decrypted ciphertext");
+};
+
+subtest "EdDSA tests for CMS \n" => sub {
+    plan tests => 2;
+
+    SKIP: {
+        skip "ECX (EdDSA) is not supported in this build", 2
+            if disabled("ecx");
+
+        my $crt1 = srctop_file("test", "certs", "root-ed25519.pem");
+        my $key1 = srctop_file("test", "certs", "root-ed25519.privkey.pem");
+        my $sig1 = "sig1.cms";
+
+        ok(run(app(["openssl", "cms", @prov, "-sign", "-md", "sha512", "-in", $smcont,
+                    "-signer", $crt1, "-inkey", $key1, "-out", $sig1])),
+           "accept CMS signature with Ed25519");
+
+        ok(run(app(["openssl", "cms", @prov, "-verify", "-in", $sig1,
+                    "-CAfile", $crt1, "-content", $smcont])),
+           "accept CMS verify with Ed25519");
+    }
 };
