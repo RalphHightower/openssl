@@ -38,32 +38,46 @@ changes:
   * Default encryption cipher for the `req`, `cms`, and `smime` applications
     changed from `des-ede3-cbc` to `aes-256-cbc`.
 
-  * The TLS supported groups list has been changed in favor of PQC support.
+  * The default TLS supported groups list has been changed to include and
+    prefer hybrid PQC KEM groups. Some practically unused groups were removed
+    from the default list.
 
   * The default TLS keyshares have been changed to offer X25519MLKEM768 and
     and X25519.
+
+  * All `BIO_meth_get_*()` functions were deprecated.
 
 This release adds the following new features:
 
   * Support for server side QUIC (RFC 9000)
 
-  * Support for 3rd party QUIC stacks
+  * Support for 3rd party QUIC stacks including 0-RTT support
 
-  * Support for PQC algorithms (ML-KEM, ML-DSA, SLH-DSA)
+  * Support for PQC algorithms (ML-KEM, ML-DSA and SLH-DSA)
 
-  * Allow the FIPS provider to optionally use the `JITTER` seed source.
-    Because this seed source is not part of the OpenSSL FIPS validations,
-    it should only be enabled after the [jitterentropy-library] has been
-    assessed for entropy quality.  Moreover, the FIPS provider including
-    this entropy source will need to obtain an [ESV] from the [CMVP] before
-    FIPS compliance can be claimed.  Enable this using the configuration
-    option `enable-fips-jitter`.
+  * A new configuration option `no-tls-deprecated-ec` to disable support for
+    TLS groups deprecated in RFC8422
+
+  * A new configuration option `enable-fips-jitter` to make the FIPS provider
+    to use the `JITTER` seed source
 
   * Support for central key generation in CMP
 
-  * Support added for opaque symmetric key objects (EVP_SKEY).
+  * Support added for opaque symmetric key objects (EVP_SKEY)
 
-  * Support for multiple TLS keyshares.
+  * Support for multiple TLS keyshares and improved TLS key establishment group
+    configurability
+
+  * API support for pipelining in provided cipher algorithms
+
+Known issues in 3.5.0
+
+  * <https://github.com/openssl/openssl/issues/27282>
+    Calling SSL_accept on objects returned from SSL_accept_connection
+    results in error.  It is expected that making this call will advance
+    the SSL handshake for the passed connection, but currently it does not.
+    This can be handled by calling SSL_do_handshake instead.  A fix is planned
+    for OpenSSL 3.5.1
 
 OpenSSL 3.4
 -----------
@@ -700,7 +714,7 @@ OpenSSL 1.1.1
     * Rewrite of the packet construction code for "safer" packet handling
     * Rewrite of the extension handling code
     For further important information, see the [TLS1.3 page](
-    https://wiki.openssl.org/index.php/TLS1.3) in the OpenSSL Wiki.
+    https://github.com/openssl/openssl/wiki/TLS1.3) in the OpenSSL Wiki.
 
   * Complete rewrite of the OpenSSL random number generator to introduce the
     following capabilities
@@ -2055,7 +2069,7 @@ OpenSSL 0.9.x
 [CVE-2006-2940]: https://www.openssl.org/news/vulnerabilities.html#CVE-2006-2940
 [CVE-2006-2937]: https://www.openssl.org/news/vulnerabilities.html#CVE-2006-2937
 [CVE-2005-2969]: https://www.openssl.org/news/vulnerabilities.html#CVE-2005-2969
-[OpenSSL Guide]: https://www.openssl.org/docs/manmaster/man7/ossl-guide-introduction.html
+[OpenSSL Guide]: https://docs.openssl.org/master/man7/ossl-guide-introduction
 [CHANGES.md]: ./CHANGES.md
 [README-QUIC.md]: ./README-QUIC.md
 [issue tracker]: https://github.com/openssl/openssl/issues

@@ -376,6 +376,7 @@ OSSL_DEPRECATEDIN_3_0 int
 /* For supplementary wrap cipher support */
 # define         EVP_CIPH_FLAG_GET_WRAP_CIPHER   0x4000000
 # define         EVP_CIPH_FLAG_INVERSE_CIPHER    0x8000000
+# define         EVP_CIPH_FLAG_ENC_THEN_MAC      0x10000000
 
 /*
  * Cipher context flag to indicate we can handle wrap mode: if allowed in
@@ -1457,6 +1458,7 @@ EVP_PKEY *d2i_AutoPrivateKey_ex(EVP_PKEY **a, const unsigned char **pp,
 EVP_PKEY *d2i_AutoPrivateKey(EVP_PKEY **a, const unsigned char **pp,
                              long length);
 int i2d_PrivateKey(const EVP_PKEY *a, unsigned char **pp);
+int i2d_PKCS8PrivateKey(const EVP_PKEY *a, unsigned char **pp);
 
 int i2d_KeyParams(const EVP_PKEY *a, unsigned char **pp);
 EVP_PKEY *d2i_KeyParams(int type, EVP_PKEY **a, const unsigned char **pp,

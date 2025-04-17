@@ -35,7 +35,7 @@ void OPENSSL_cpuid_setup(void)
     OPENSSL_armcap_P |= ARMV7_NEON;
     OPENSSL_armv8_rsa_neonized = 1;
     if (IsProcessorFeaturePresent(PF_ARM_V8_CRYPTO_INSTRUCTIONS_AVAILABLE)) {
-        // These are all covered by one call in Windows
+        /* These are all covered by one call in Windows */
         OPENSSL_armcap_P |= ARMV8_AES;
         OPENSSL_armcap_P |= ARMV8_PMULL;
         OPENSSL_armcap_P |= ARMV8_SHA1;
@@ -422,11 +422,14 @@ void OPENSSL_cpuid_setup(void)
          MIDR_IS_CPU_MODEL(OPENSSL_arm_midr, ARM_CPU_IMP_ARM, ARM_CPU_PART_N2) ||
          MIDR_IS_CPU_MODEL(OPENSSL_arm_midr, ARM_CPU_IMP_MICROSOFT, MICROSOFT_CPU_PART_COBALT_100) ||
          MIDR_IS_CPU_MODEL(OPENSSL_arm_midr, ARM_CPU_IMP_ARM, ARM_CPU_PART_V2) ||
+         MIDR_IS_CPU_MODEL(OPENSSL_arm_midr, ARM_CPU_IMP_ARM, ARM_CPU_PART_N3) ||
+         MIDR_IS_CPU_MODEL(OPENSSL_arm_midr, ARM_CPU_IMP_ARM, ARM_CPU_PART_V3) ||
          MIDR_IMPLEMENTER(OPENSSL_arm_midr) == ARM_CPU_IMP_AMPERE) &&
         (OPENSSL_armcap_P & ARMV8_SHA3))
         OPENSSL_armcap_P |= ARMV8_UNROLL8_EOR3;
     if ((MIDR_IS_CPU_MODEL(OPENSSL_arm_midr, ARM_CPU_IMP_ARM, ARM_CPU_PART_V1) ||
          MIDR_IS_CPU_MODEL(OPENSSL_arm_midr, ARM_CPU_IMP_ARM, ARM_CPU_PART_V2) ||
+         MIDR_IS_CPU_MODEL(OPENSSL_arm_midr, ARM_CPU_IMP_ARM, ARM_CPU_PART_V3) ||
          MIDR_IMPLEMENTER(OPENSSL_arm_midr) == ARM_CPU_IMP_AMPERE) &&
         (OPENSSL_armcap_P & ARMV8_SHA3))
         OPENSSL_armcap_P |= ARMV8_UNROLL12_EOR3;

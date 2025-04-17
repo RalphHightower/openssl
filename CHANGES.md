@@ -12,6 +12,7 @@ appropriate release branch.
 OpenSSL Releases
 ----------------
 
+ - [OpenSSL 3.6](#openssl-36)
  - [OpenSSL 3.5](#openssl-35)
  - [OpenSSL 3.4](#openssl-34)
  - [OpenSSL 3.3](#openssl-33)
@@ -25,18 +26,66 @@ OpenSSL Releases
  - [OpenSSL 1.0.0](#openssl-100)
  - [OpenSSL 0.9.x](#openssl-09x)
 
-OpenSSL 3.5
+OpenSSL 3.6
 -----------
 
 ### Changes between 3.5 and 3.6 [xx XXX xxxx]
 
- * none yet
+ * Support setting a free function thunk to OPENSSL_sk stack types. Using a thunk
+   allows the type specific free function to be called with the correct type
+   information from generic functions like OPENSSL_sk_pop_free().
+
+   *Frederik Wedel-Heinen*
+
+ * Enabled x86-64 SM4 optimizations with SM4 ISA Extension available starting
+   Lunar Lake and Arrow Lake S CPUs. The expected performance improvement is
+   ~3.6x for sm4-cbc, ~2.9x for sm4-gcm, ~9.2x for sm4-xts, ~5.3x for sm4-ccm
+   (on average, may vary depending on the data size) on Arrow Lake S.
+
+   *Alina Elizarova*
+
+ * Enabled x86-64 SM3 optimizations with SM3 ISA Extension available starting
+   Lunar Lake and Arrow Lake S CPUs. The expected performance improvement is
+   ~ 2.2-4.7x (depends on the data size) on Arrow Lake S.
+
+   *Alina Elizarova*
+
+ * Enabled x86-64 SHA-512 optimizations with SHA512 ISA Extension.
+   Optimized digests: `sha384`, `sha512`, `sha512-224`, `sha512-256`.
+   `openssl speed` shows speedups ranging from 1.6x to 4.5x on
+   the P-cores of Intel Core Ultra 5 238V.
+
+   *Adrian Stanciu*
+
+ * Change default EC point formats configuration to support only 'uncompressed'
+   format, and add SSL_OP_LEGACY_EC_POINT_FORMATS flag and options to re-enable
+   previous default if required.
+
+   *Tim Perry*
+
+OpenSSL 3.5
+-----------
 
 ### Changes between 3.4 and 3.5 [xx XXX xxxx]
 
-* Added server side support for QUIC
+ * Added server side support for QUIC
 
    *Hugo Landau, Matt Caswell, Tomáš Mráz, Neil Horman, Sasha Nedvedicky, Andrew Dinh*
+
+ * Tolerate PKCS#8 version 2 with optional public keys. The public key data
+   is currently ignored.
+
+   *Viktor Dukhovni*
+
+ * Signature schemes without an explicit signing digest in CMS are now supported.
+   Examples of such schemes are ED25519 or ML-DSA.
+
+   *Michael Schroeder*
+
+ * The TLS Signature algorithms defaults now include all three ML-DSA variants as
+   first algorithms.
+
+   *Viktor Dukhovni*
 
  * Added a `no-tls-deprecated-ec` configuration option.
 
@@ -97,17 +146,10 @@ OpenSSL 3.5
 
    *Simo Sorce*
 
- * Initial support for opaque symmetric keys objects.  These replace the ad-hoc byte
-   arrays that are pervasive throughout the library.
+ * Initial support for opaque symmetric keys objects (EVP_SKEY). These
+   replace the ad-hoc byte arrays that are pervasive throughout the library.
 
    *Dmitry Belyavskiy and Simo Sorce*
-
- * For TLSv1.3: Add capability for a client to send multiple key shares. Extend the scope of
-   `SSL_OP_CIPHER_SERVER_PREFERENCE` to cover server-side key exchange group selection.
-   Extend the server-side key exchange group selection algorithm and related group list syntax
-   to support multiple group priorities, e.g. to prioritize (hybrid-)KEMs.
-
-   *David Kelsey*, *Martin Schmatz*
 
  * The default TLS group list setting is now set to:
    `?*X25519MLKEM768 / ?*X25519:?secp256r1 / ?X448:?secp384r1:?secp521r1 / ?ffdhe2048:?ffdhe3072`
@@ -116,7 +158,19 @@ OpenSSL 3.5
    default by the TLS client. GOST groups and FFDHE groups larger than 3072
    bits are no longer enabled by default.
 
+   The group names in the group list setting are now also case insensitive.
+
    *Viktor Dukhovni*
+
+ * For TLSv1.3: Add capability for a client to send multiple key shares.
+   Extend the scope of `SSL_OP_CIPHER_SERVER_PREFERENCE` to cover
+   server-side key exchange group selection.
+
+   Extend the server-side key exchange group selection algorithm and related
+   group list syntax to support multiple group priorities, e.g. to prioritize
+   (hybrid-)KEMs.
+
+   *David Kelsey*, *Martin Schmatz*
 
  * A new random generation API has been introduced which modifies all
    of the L<RAND_bytes(3)> family of calls so they are routed through a
@@ -240,21 +294,51 @@ OpenSSL 3.5
 
    *Pablo De Lara Guarch, Dan Pittman*
 
- * Fix EVP_DecodeUpdate(): do not write padding zeros to the decoded output.
+ * Fixed EVP_DecodeUpdate() to not write padding zeros to the decoded output.
 
-   According to the documentation,
-   for every 4 valid base64 bytes processed (ignoring whitespace, carriage returns and line feeds),
-   EVP_DecodeUpdate() produces 3 bytes of binary output data
-   (except at the end of data terminated with one or two padding characters).
-   However, the function behaved like an EVP_DecodeBlock():
-   produces exactly 3 output bytes for every 4 input bytes.
-   Such behaviour could cause writes to a non-allocated output buffer
-   if a user allocates its size based on the documentation and knowing the padding size.
+   According to the documentation, for every 4 valid base64 bytes processed
+   (ignoring whitespace, carriage returns and line feeds), EVP_DecodeUpdate()
+   produces 3 bytes of binary output data (except at the end of data
+   terminated with one or two padding characters). However, the function
+   behaved like an EVP_DecodeBlock(). It produced exactly 3 output bytes for
+   every 4 input bytes. Such behaviour could cause writes to a non-allocated
+   output buffer if a user allocates its size based on the documentation and
+   knowing the padding size.
 
-   The fix makes EVP_DecodeUpdate() produce
-   exactly as many output bytes as in the initial non-encoded message.
+   The fix makes EVP_DecodeUpdate() produce exactly as many output bytes as
+   in the initial non-encoded message.
 
    *Valerii Krygin*
+
+ * Added support for aAissuingDistributionPoint, allowedAttributeAssignments,
+   timeSpecification, attributeDescriptor, roleSpecCertIdentifier,
+   authorityAttributeIdentifier and attributeMappings X.509v3 extensions.
+
+   *Jonathan M. Wilbur*
+
+ * Added a new CLI option `-provparam` and API functions for setting of
+   provider configuration parameters.
+
+   *Viktor Dukhovni*
+
+ * Added a new trace category for PROVIDER calls and added new tracing calls
+   in provider and algorithm fetching API functions.
+
+   *Neil Horman*
+
+ * Fixed benchmarking for AEAD ciphers in the `openssl speed` utility.
+
+   *Mohammed Alhabib*
+
+ * Added a build configuration option `enable-sslkeylog` for enabling support
+   for SSLKEYLOGFILE environment variable to log TLS connection secrets.
+
+   *Neil Horman*
+
+ * Added EVP_get_default_properties() function to retrieve the current default
+   property query string.
+
+   *Dmitry Belyavskiy*
 
 OpenSSL 3.4
 -----------
@@ -4473,7 +4557,7 @@ OpenSSL 1.1.1
  * Support for TLSv1.3 added. Note that users upgrading from an earlier
    version of OpenSSL should review their configuration settings to ensure
    that they are still appropriate for TLSv1.3. For further information see:
-   <https://wiki.openssl.org/index.php/TLS1.3>
+   <https://github.com/openssl/openssl/wiki/TLS1.3>
 
    *Matt Caswell*
 
@@ -5761,7 +5845,7 @@ OpenSSL 1.1.0
 
  * The GOST engine was out of date and therefore it has been removed. An up
    to date GOST engine is now being maintained in an external repository.
-   See: <https://wiki.openssl.org/index.php/Binaries>. Libssl still retains
+   See: <https://github.com/openssl/openssl/wiki/Binaries>. Libssl still retains
    support for GOST ciphersuites (these are only activated if a GOST engine
    is present).
 
@@ -6539,6 +6623,11 @@ OpenSSL 1.1.0
    validated when establishing a connection.
 
    *Rob Percival <robpercival@google.com>*
+
+ * SSLv3 is by default disabled at build-time. Builds that are not
+   configured with "enable-ssl3" will not support SSLv3.
+
+   *Kurt Roeckx*
 
 OpenSSL 1.0.2
 -------------

@@ -42,6 +42,7 @@ my @defaultprov = ("-provider-path", $provpath,
 my @config = ( );
 my $provname = 'default';
 my $dsaallow = '1';
+my $no_pqc = 0;
 
 my $datadir = srctop_dir("test", "recipes", "80-test_cms_data");
 my $smdir    = srctop_dir("test", "smime-certs");
@@ -52,7 +53,7 @@ my ($no_des, $no_dh, $no_dsa, $no_ec, $no_ec2m, $no_rc2, $no_zlib)
 
 $no_rc2 = 1 if disabled("legacy");
 
-plan tests => 30;
+plan tests => 31;
 
 ok(run(test(["pkcs7_test"])), "test pkcs7");
 
@@ -62,9 +63,11 @@ unless ($no_fips) {
     $provname = 'fips';
 
     run(test(["fips_version_test", "-config", $provconf, "<3.4.0"]),
-    capture => 1, statusvar => \$dsaallow);
+        capture => 1, statusvar => \$dsaallow);
     $no_dsa = 1 if $dsaallow == '0';
     $old_fips = 1 if $dsaallow != '0';
+    run(test(["fips_version_test", "-config", $provconf, "<3.5.0"]),
+        capture => 1, statusvar => \$no_pqc);
 }
 
 $ENV{OPENSSL_TEST_LIBCTX} = "1";
@@ -1378,7 +1381,7 @@ subtest "encrypt to three recipients with RSA-OAEP, key only decrypt" => sub {
     is(compare($pt, $ptpt), 0, "compare original message with decrypted ciphertext");
 };
 
-subtest "EdDSA tests for CMS \n" => sub {
+subtest "EdDSA tests for CMS" => sub {
     plan tests => 2;
 
     SKIP: {
@@ -1399,12 +1402,12 @@ subtest "EdDSA tests for CMS \n" => sub {
     }
 };
 
-subtest "ML-DSA tests for CMS \n" => sub {
+subtest "ML-DSA tests for CMS" => sub {
     plan tests => 2;
 
     SKIP: {
         skip "ML-DSA is not supported in this build", 2
-            if disabled("ml-dsa");
+            if disabled("ml-dsa") || $no_pqc;
 
         my $sig1 = "sig1.cms";
 
@@ -1420,12 +1423,12 @@ subtest "ML-DSA tests for CMS \n" => sub {
     }
 };
 
-subtest "SLH-DSA tests for CMS \n" => sub {
+subtest "SLH-DSA tests for CMS" => sub {
     plan tests => 6;
 
     SKIP: {
         skip "SLH-DSA is not supported in this build", 6
-            if disabled("slh-dsa");
+            if disabled("slh-dsa") || $no_pqc;
 
         my $sig1 = "sig1.cms";
 
@@ -1459,4 +1462,58 @@ subtest "SLH-DSA tests for CMS \n" => sub {
                     "-CAfile", $smroot, "-content", $smcont])),
            "accept CMS verify with SLH-DSA-SHAKE-256s");
     }
+};
+
+subtest "sign and verify with multiple keys" => sub {
+    plan tests => 7;
+
+    my $smrsa2 = catfile($smdir, "smrsa2.pem");
+    my $sig1 = "sig1.cms";
+    my $out1 = "out1.txt";
+    my $sig2 = "sig2.cms";
+    my $out2 = "out2.txt";
+
+    ok(run(app(['openssl', 'cms',
+		@defaultprov,
+		'-sign', '-in', $smcont,
+                '-nodetach',
+                '-signer', $smrsa1,
+		'-out', $sig1, '-outform', 'DER',
+	       ])),
+       "sign with first key");
+    ok(run(app(['openssl', 'cms',
+		@defaultprov,
+		'-verify', '-in', $sig1, '-inform', 'DER',
+                '-CAfile', $smrsa1, '-partial_chain',
+		'-out', $out1,
+	       ])),
+       "verify single signature");
+    is(compare($smcont, $out1), 0, "compare original message with verified message");
+
+    ok(run(app(['openssl', 'cms',
+		@defaultprov,
+		'-resign', '-in', $sig1, '-inform', 'DER',
+                '-signer', $smrsa2,
+		'-out', $sig2, '-outform', 'DER',
+	       ])),
+       "resign with second key");
+
+    # because the smrsa2 signature cannot be verified, overall verification fails
+    ok(!run(app(['openssl', 'cms',
+		@defaultprov,
+		'-verify', '-in', $sig2, '-inform', 'DER',
+                '-CAfile', $smrsa1, '-partial_chain',
+		'-out', $out2,
+	       ])),
+       "try to verify two signatures with only rsa1");
+
+    # because both signatures can be verified, overall verification succeeds
+    ok(run(app(['openssl', 'cms',
+		@defaultprov,
+		'-verify', '-in', $sig2, '-inform', 'DER',
+                '-CAfile', $smroot,
+		'-out', $out2,
+	       ])),
+       "verify both signature signatures with root");
+    is(compare($smcont, $out2), 0, "compare original message with verified message");
 };

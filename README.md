@@ -10,8 +10,7 @@ Welcome to the OpenSSL Project
 ![Daily checks](https://github.com/openssl/openssl/actions/workflows/run-checker-daily.yml/badge.svg)
 
 OpenSSL is a robust, commercial-grade, full-featured Open Source Toolkit
-for the TLS (formerly SSL), DTLS and QUIC (currently client side only)
-protocols.
+for the TLS (formerly SSL), DTLS and QUIC protocols.
 
 The protocol implementations are based on a full-strength general purpose
 cryptographic library, which can also be used stand-alone. Also included is a
@@ -42,7 +41,7 @@ The OpenSSL toolkit includes:
 - **libssl**
   an implementation of all TLS protocol versions up to TLSv1.3 ([RFC 8446]),
   DTLS protocol versions up to DTLSv1.2 ([RFC 6347]) and
-  the QUIC (currently client side only) version 1 protocol ([RFC 9000]).
+  the QUIC version 1 protocol ([RFC 9000]).
 
 - **libcrypto**
   a full-strength general purpose cryptographic library. It constitutes the
@@ -150,10 +149,12 @@ Manual Pages
 The manual pages for the master branch and all current stable releases are
 available online.
 
-- [OpenSSL master](https://www.openssl.org/docs/manmaster)
-- [OpenSSL 3.0](https://www.openssl.org/docs/man3.0)
-- [OpenSSL 3.1](https://www.openssl.org/docs/man3.1)
-- [OpenSSL 3.2](https://www.openssl.org/docs/man3.2)
+- [OpenSSL master](https://docs.openssl.org/master/)
+- [OpenSSL 3.5](https://docs.openssl.org/3.5/)
+- [OpenSSL 3.4](https://docs.openssl.org/3.4/)
+- [OpenSSL 3.3](https://docs.openssl.org/3.3/)
+- [OpenSSL 3.2](https://docs.openssl.org/3.2/)
+- [OpenSSL 3.0](https://docs.openssl.org/3.0/)
 
 Demos
 -----
@@ -164,8 +165,7 @@ There are numerous source code demos for using various OpenSSL capabilities in t
 Wiki
 ----
 
-There is a Wiki at [wiki.openssl.org] which is currently not very active.
-It contains a lot of useful information, not all of which is up-to-date.
+There is a [GitHub Wiki] which is currently not very active.
 
 License
 =======
@@ -214,12 +214,12 @@ All rights reserved.
     <https://github.com/openssl/openssl>
     "OpenSSL GitHub Mirror"
 
-[wiki.openssl.org]:
-    <https://wiki.openssl.org>
+[GitHub Wiki]:
+    <https://github.com/openssl/openssl/wiki>
     "OpenSSL Wiki"
 
 [ossl-guide-migration(7ossl)]:
-    <https://www.openssl.org/docs/manmaster/man7/ossl-guide-migration.html>
+    <https://docs.openssl.org/master/man7/ossl-guide-migration>
     "OpenSSL Migration Guide"
 
 [RFC 8446]:
@@ -232,11 +232,11 @@ All rights reserved.
      <https://tools.ietf.org/html/rfc9000>
 
 [Binaries]:
-    <https://wiki.openssl.org/index.php/Binaries>
+    <https://github.com/openssl/openssl/wiki/Binaries>
     "List of third party OpenSSL binaries"
 
 [OpenSSL Guide]:
-    <https://www.openssl.org/docs/manmaster/man7/ossl-guide-introduction.html>
+    <https://docs.openssl.org/master/man7/ossl-guide-introduction>
     "An introduction to OpenSSL"
 
 <!-- Logos and Badges -->
