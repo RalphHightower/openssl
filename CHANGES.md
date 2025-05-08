@@ -31,6 +31,19 @@ OpenSSL 3.6
 
 ### Changes between 3.5 and 3.6 [xx XXX xxxx]
 
+ * The VxWorks platforms have been removed. These platforms were unadopted,
+   unmaintained and reported to be non-functional.
+
+   *Anthony Ioppolo*
+
+ * Relax the path check in OpenSSL's 'file:' scheme implementation for
+   OSSL_STORE.  Previously, when the 'file:' scheme is an explicit part
+   of the URI, our implementation required an absolute path, such as
+   'file:/path/to/file.pem'.  This requirement is now relaxed, allowing
+   'file:path/to/file.pem', as well as 'file:file.pem'.
+
+   *Richard Levitte*
+
  * Changed openssl-pkey(1) to match the documentation when private keys
    are output in DER format (`-outform DER`) by producing the `PKCS#8` form by
    default.  Previously this would output the *traditional* form for those
@@ -39,6 +52,11 @@ OpenSSL 3.6
    that format in DER format (it was previously PEM-only).
 
    *Viktor Dukhovni*
+
+ * Added an `openssl configutl` utility for processing the openssl
+   configuration file and dumping the equal configuration file.
+
+   *Dmitry Belyavskiy based on Clemens Lang's code*
 
  * Support setting a free function thunk to OPENSSL_sk stack types. Using a thunk
    allows the type specific free function to be called with the correct type
@@ -71,6 +89,12 @@ OpenSSL 3.6
    previous default if required.
 
    *Tim Perry*
+
+ * Increase PKCS12 default macsaltlen from 8 to 16, as per NIST SP
+   800-132 this improves interoperability for newly generated PKCS12
+   stores between FIPS and non-FIPS implementations.
+
+   *Dimitri John Ledkov*
 
 OpenSSL 3.5
 -----------
