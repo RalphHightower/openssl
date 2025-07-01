@@ -304,6 +304,10 @@ static int ecx_get_params(void *key, OSSL_PARAM params[], int bits, int secbits,
         if (!OSSL_PARAM_set_octet_string(p, ecx->pubkey, ecx->keylen))
             return 0;
     }
+    if ((p = OSSL_PARAM_locate(params,
+                               OSSL_PKEY_PARAM_SECURITY_CATEGORY)) != NULL
+        && !OSSL_PARAM_set_int(p, 0))
+            return 0;
 #ifdef FIPS_MODULE
     {
         /* X25519 and X448 are not approved */
@@ -359,6 +363,7 @@ static const OSSL_PARAM ecx_gettable_params[] = {
     OSSL_PARAM_int(OSSL_PKEY_PARAM_BITS, NULL),
     OSSL_PARAM_int(OSSL_PKEY_PARAM_SECURITY_BITS, NULL),
     OSSL_PARAM_int(OSSL_PKEY_PARAM_MAX_SIZE, NULL),
+    OSSL_PARAM_int(OSSL_PKEY_PARAM_SECURITY_CATEGORY, NULL),
     OSSL_PARAM_octet_string(OSSL_PKEY_PARAM_ENCODED_PUBLIC_KEY, NULL, 0),
     ECX_KEY_TYPES(),
     OSSL_FIPS_IND_GETTABLE_CTX_PARAM()
@@ -505,9 +510,11 @@ static void *ecx_gen_init(void *provctx, int selection,
         if (algdesc != NULL
                 && !ossl_FIPS_IND_callback(libctx, algdesc, "KeyGen Init")) {
             OPENSSL_free(gctx);
-            return 0;
+            return NULL;
         }
 #endif
+    } else {
+        return NULL;
     }
     if (!ecx_gen_set_params(gctx, params)) {
         ecx_gen_cleanup(gctx);
@@ -842,6 +849,9 @@ static void *ed448_gen(void *genctx, OSSL_CALLBACK *osslcb, void *cbarg)
 static void ecx_gen_cleanup(void *genctx)
 {
     struct ecx_gen_ctx *gctx = genctx;
+
+    if (gctx == NULL)
+        return;
 
     OPENSSL_clear_free(gctx->dhkem_ikm, gctx->dhkem_ikmlen);
     OPENSSL_free(gctx->propq);

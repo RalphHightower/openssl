@@ -12,11 +12,12 @@ use warnings;
 
 use File::Spec;
 use OpenSSL::Test::Utils;
-use OpenSSL::Test qw/:DEFAULT srctop_file/;
+use OpenSSL::Test qw/:DEFAULT srctop_file result_file/;
+use File::Compare qw/compare_text/;
 
 setup("test_x509");
 
-plan tests => 134;
+plan tests => 140;
 
 # Prevent MSys2 filename munging for arguments that look like file paths but
 # aren't
@@ -109,6 +110,16 @@ ok(run(app(["openssl", "x509", "-new", "-force_pubkey", $key, "-subj", "/CN=EE",
             "-extfile", $extfile, "-CA", $ca, "-CAkey", $pkey, "-out", $caout]))
 && run(app(["openssl", "verify", "-no_check_time",
             "-trusted", $ca, "-partial_chain", $caout])));
+
+# test trust decoration
+ok(run(app(["openssl", "x509", "-in", $ca, "-addtrust", "emailProtection",
+            "-out", "ca-trusted.pem"])));
+cert_contains("ca-trusted.pem", "Trusted Uses: E-mail Protection",
+              1, 'trusted use - E-mail Protection');
+ok(run(app(["openssl", "x509", "-in", $ca, "-addreject", "emailProtection",
+            "-out", "ca-rejected.pem"])));
+cert_contains("ca-rejected.pem", "Rejected Uses: E-mail Protection",
+              1, 'rejected use - E-mail Protection');
 
 subtest 'x509 -- x.509 v1 certificate' => sub {
     tconversion( -type => 'x509', -prefix => 'x509v1',
@@ -484,6 +495,19 @@ ok(run(app(["openssl", "x509", "-noout", "-dates", "-dateopt", "iso_8601",
 ok(!run(app(["openssl", "x509", "-noout", "-dates", "-dateopt", "invalid_format",
 	     "-in", srctop_file("test/certs", "ca-cert.pem")])),
    "Run with invalid -dateopt format");
+
+my $ca_cert = srctop_file(@certs, "ca-cert.pem");
+my $goodcn2_chain = srctop_file(@certs, "goodcn2-chain.pem");
+
+# -multi test with single cert
+ok(run(app(["openssl", "x509", "-multi", "-in", $ca_cert])),
+   "Run with -multi (single cert)");
+
+# -multi test with multiple certs
+my $outfile = result_file("multi.out");
+ok(run(app(["openssl", "x509", "-multi", "-in", $goodcn2_chain, "-out", $outfile]))
+   && compare_text($outfile, $goodcn2_chain) == 0,
+   "Run with -multi (multiple certs)");
 
 # Tests for signing certs (broken in 1.1.1o)
 my $a_key = "a-key.pem";

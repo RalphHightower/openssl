@@ -393,6 +393,7 @@ static int test_fromdata_rsa(void)
         ret = 0;
         if (!TEST_int_eq(EVP_PKEY_get_bits(pk), 32)
             || !TEST_int_eq(EVP_PKEY_get_security_bits(pk), 8)
+            || !TEST_int_eq(EVP_PKEY_get_security_category(pk), 0)
             || !TEST_int_eq(EVP_PKEY_get_size(pk), 4)
             || !TEST_false(EVP_PKEY_missing_parameters(pk)))
             goto err;
@@ -495,6 +496,7 @@ static int do_fromdata_rsa_derive(OSSL_PARAM *fromdata_params,
     for (;;) {
         if (!TEST_int_eq(EVP_PKEY_get_bits(pk), expected_nbits)
             || !TEST_int_eq(EVP_PKEY_get_security_bits(pk), expected_sbits)
+            || !TEST_int_eq(EVP_PKEY_get_security_category(pk), 0)
             || !TEST_int_eq(EVP_PKEY_get_size(pk), expected_ksize)
             || !TEST_false(EVP_PKEY_missing_parameters(pk)))
             goto err;
@@ -1004,6 +1006,7 @@ static int test_fromdata_dh_named_group(void)
         ret = 0;
         if (!TEST_int_eq(EVP_PKEY_get_bits(pk), 2048)
             || !TEST_int_eq(EVP_PKEY_get_security_bits(pk), 112)
+            || !TEST_int_eq(EVP_PKEY_get_security_category(pk), 0)
             || !TEST_int_eq(EVP_PKEY_get_size(pk), 256)
             || !TEST_false(EVP_PKEY_missing_parameters(pk)))
             goto err;
@@ -1188,6 +1191,7 @@ static int test_fromdata_dh_fips186_4(void)
         ret = 0;
         if (!TEST_int_eq(EVP_PKEY_get_bits(pk), 2048)
             || !TEST_int_eq(EVP_PKEY_get_security_bits(pk), 112)
+            || !TEST_int_eq(EVP_PKEY_get_security_category(pk), 0)
             || !TEST_int_eq(EVP_PKEY_get_size(pk), 256)
             || !TEST_false(EVP_PKEY_missing_parameters(pk)))
             goto err;
@@ -1499,6 +1503,7 @@ static int test_fromdata_ecx(int tst)
         ret = 0;
         if (!TEST_int_eq(EVP_PKEY_get_bits(pk), bits)
             || !TEST_int_eq(EVP_PKEY_get_security_bits(pk), security_bits)
+            || !TEST_int_eq(EVP_PKEY_get_security_category(pk), 0)
             || !TEST_int_eq(EVP_PKEY_get_size(pk), size)
             || !TEST_false(EVP_PKEY_missing_parameters(pk)))
             goto err;
@@ -1675,6 +1680,7 @@ static int test_fromdata_ec(void)
         ret = 0;
         if (!TEST_int_eq(EVP_PKEY_get_bits(pk), 256)
             || !TEST_int_eq(EVP_PKEY_get_security_bits(pk), 128)
+            || !TEST_int_eq(EVP_PKEY_get_security_category(pk), 0)
             || !TEST_int_eq(EVP_PKEY_get_size(pk), 2 + 35 * 2)
             || !TEST_false(EVP_PKEY_missing_parameters(pk)))
             goto err;
@@ -2000,6 +2006,7 @@ static int test_fromdata_dsa_fips186_4(void)
         ret = 0;
         if (!TEST_int_eq(EVP_PKEY_get_bits(pk), 2048)
             || !TEST_int_eq(EVP_PKEY_get_security_bits(pk), 112)
+            || !TEST_int_eq(EVP_PKEY_get_security_category(pk), 0)
             || !TEST_int_eq(EVP_PKEY_get_size(pk), 2 + 2 * (3 + sizeof(q_data)))
             || !TEST_false(EVP_PKEY_missing_parameters(pk)))
             goto err;
@@ -2180,6 +2187,53 @@ err:
     return ret;
 }
 
+static const char *name_dup_algs[] = {
+#ifndef OPENSSL_NO_ECX
+    "ED25519",
+#endif
+#ifndef OPENSSL_NO_ML_KEM
+    "ML-KEM-512",
+#endif
+#ifndef OPENSSL_NO_ML_DSA
+    "ML-DSA-44",
+#endif
+    NULL
+};
+
+static int test_name_dup(int idx)
+{
+    const char *alg = name_dup_algs[idx];
+    EVP_PKEY *key = NULL;
+    EVP_PKEY_CTX *factory = NULL, *ctx = NULL;
+    int i, ret = 0;
+
+    if (alg == NULL
+        || (factory = EVP_PKEY_CTX_new_from_name(NULL, alg, NULL)) == NULL)
+        return 1;
+    TEST_info("Testing fresh context dup for: %s", alg);
+
+    /* Run twice to check that *repeated* use works */
+    for (i = 0; i < 2; ++i) {
+        EVP_PKEY_CTX_free(ctx);
+        EVP_PKEY_free(key);
+        key = NULL;
+        if (!TEST_ptr(ctx = EVP_PKEY_CTX_dup(factory))
+            || !TEST_int_gt(EVP_PKEY_keygen_init(ctx), 0)
+            || !TEST_int_gt(EVP_PKEY_keygen(ctx, &key), 0)) {
+            ERR_print_errors(bio_err);
+            goto end;
+        }
+    }
+    ret = 1;
+
+ end:
+    EVP_PKEY_CTX_free(factory);
+    EVP_PKEY_CTX_free(ctx);
+    EVP_PKEY_free(key);
+
+    return ret;
+}
+
 int setup_tests(void)
 {
     if (!test_skip_common_options()) {
@@ -2191,6 +2245,7 @@ int setup_tests(void)
         return 0;
 
     ADD_TEST(test_evp_pkey_ctx_dup_kdf);
+    ADD_ALL_TESTS(test_name_dup, OSSL_NELEM(name_dup_algs));
     ADD_TEST(test_evp_pkey_get_bn_param_large);
     ADD_TEST(test_fromdata_rsa);
     ADD_TEST(test_fromdata_rsa_derive_from_pq_sp800);

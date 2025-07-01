@@ -977,6 +977,7 @@ WORK_STATE ossl_statem_server_post_work(SSL_CONNECTION *s, WORK_STATE wst)
 
         if (SSL_CONNECTION_IS_TLS13(s)) {
             if (!ssl->method->ssl3_enc->setup_key_block(s)
+                || !tls13_store_handshake_traffic_hash(s)
                 || !ssl->method->ssl3_enc->change_cipher_state(s,
                         SSL3_CC_HANDSHAKE | SSL3_CHANGE_CIPHER_SERVER_WRITE)) {
                 /* SSLfatal() already called */
@@ -1040,6 +1041,7 @@ WORK_STATE ossl_statem_server_post_work(SSL_CONNECTION *s, WORK_STATE wst)
             if (!ssl->method->ssl3_enc->generate_master_secret(s,
                         s->master_secret, s->handshake_secret, 0,
                         &dummy)
+                || !tls13_store_server_finished_hash(s)
                 || !ssl->method->ssl3_enc->change_cipher_state(s,
                         SSL3_CC_APPLICATION | SSL3_CHANGE_CIPHER_SERVER_WRITE))
             /* SSLfatal() already called */
@@ -3140,8 +3142,11 @@ static int tls_process_cke_ecdhe(SSL_CONNECTION *s, PACKET *pkt)
          * ClientKeyExchange message.
          */
 
-        /* Get encoded point length */
-        if (!PACKET_get_1(pkt, &i) || !PACKET_get_bytes(pkt, &data, i)
+        /*
+         * Get encoded point length
+         * empty key should be handled here
+         */
+        if (!PACKET_get_1(pkt, &i) || i == 0 || !PACKET_get_bytes(pkt, &data, i)
             || PACKET_remaining(pkt) != 0) {
             SSLfatal(s, SSL_AD_DECODE_ERROR, SSL_R_LENGTH_MISMATCH);
             goto err;
