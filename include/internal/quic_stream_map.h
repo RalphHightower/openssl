@@ -509,8 +509,8 @@ static ossl_inline ossl_unused int ossl_quic_stream_recv_get_final_size(const QU
  * Determines the number of bytes available still to be read, and (if
  * include_fin is 1) whether a FIN or reset has yet to be read.
  */
-static ossl_inline ossl_unused int ossl_quic_stream_recv_pending(const QUIC_STREAM *s,
-                                                                 int include_fin)
+static ossl_inline ossl_unused size_t ossl_quic_stream_recv_pending(const QUIC_STREAM *s,
+                                                                    int include_fin)
 {
     size_t avail;
     int fin = 0;
@@ -833,6 +833,13 @@ void ossl_quic_stream_map_push_accept_queue(QUIC_STREAM_MAP *qsm,
  * empty.
  */
 QUIC_STREAM *ossl_quic_stream_map_peek_accept_queue(QUIC_STREAM_MAP *qsm);
+
+/*
+ * Returns the next item to be popped from the accept queue matching the given
+ * stream type, or NULL if it there are no items that match.
+ */
+QUIC_STREAM *ossl_quic_stream_map_find_in_accept_queue(QUIC_STREAM_MAP *qsm,
+                                                       int is_uni);
 
 /*
  * Removes a stream from the accept queue. rtt is the estimated connection RTT.
