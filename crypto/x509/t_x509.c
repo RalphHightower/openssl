@@ -33,8 +33,7 @@ int X509_print_fp(FILE *fp, X509 *x)
     return X509_print_ex_fp(fp, x, XN_FLAG_COMPAT, X509_FLAG_COMPAT);
 }
 
-int X509_print_ex_fp(FILE *fp, X509 *x, unsigned long nmflag,
-                     unsigned long cflag)
+int X509_print_ex_fp(FILE *fp, X509 *x, unsigned long nmflag, unsigned long cflag)
 {
     BIO *b;
     int ret;
@@ -50,13 +49,12 @@ int X509_print_ex_fp(FILE *fp, X509 *x, unsigned long nmflag,
 }
 #endif
 
-int X509_print(BIO *bp, X509 *x)
+int X509_print(BIO *bp, const X509 *x)
 {
     return X509_print_ex(bp, x, XN_FLAG_COMPAT, X509_FLAG_COMPAT);
 }
 
-int X509_print_ex(BIO *bp, X509 *x, unsigned long nmflags,
-                  unsigned long cflag)
+int X509_print_ex(BIO *bp, const X509 *x, unsigned long nmflags, unsigned long cflag)
 {
     long l;
     int ret = 0;
@@ -200,7 +198,7 @@ int X509_print_ex(BIO *bp, X509 *x, unsigned long nmflags,
     return ret;
 }
 
-int X509_ocspid_print(BIO *bp, X509 *x)
+int X509_ocspid_print(BIO *bp, const X509 *x)
 {
     unsigned char *der = NULL;
     unsigned char *dertmp;
@@ -224,7 +222,8 @@ int X509_ocspid_print(BIO *bp, X509 *x)
         goto err;
     if ((der = dertmp = OPENSSL_malloc(derlen)) == NULL)
         goto err;
-    i2d_X509_NAME(subj, &dertmp);
+    if (i2d_X509_NAME(subj, &dertmp) < 0)
+        goto err;
 
     md = EVP_MD_fetch(x->libctx, SN_sha1, x->propq);
     if (md == NULL)
@@ -322,7 +321,7 @@ int X509_signature_print(BIO *bp, const X509_ALGOR *sigalg,
     return 1;
 }
 
-int X509_aux_print(BIO *out, X509 *x, int indent)
+int X509_aux_print(BIO *out, const X509 *x, int indent)
 {
     char oidstr[80], first;
     STACK_OF(ASN1_OBJECT) *trust, *reject;

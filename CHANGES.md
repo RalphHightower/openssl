@@ -12,6 +12,7 @@ appropriate release branch.
 OpenSSL Releases
 ----------------
 
+ - [OpenSSL 4.0](#openssl-40)
  - [OpenSSL 3.6](#openssl-36)
  - [OpenSSL 3.5](#openssl-35)
  - [OpenSSL 3.4](#openssl-34)
@@ -26,18 +27,149 @@ OpenSSL Releases
  - [OpenSSL 1.0.0](#openssl-100)
  - [OpenSSL 0.9.x](#openssl-09x)
 
+OpenSSL 4.0
+-----------
+
+### Changes between 3.6 and 4.0 [xx XXX xxxx]
+
+ * various function parameters have been constified,
+   in particular for X509-related functions.
+
+   *David von Oheimb*
+
+ * Added `-hmac-env` and `-hmac-stdin` options to openssl-dgst.
+
+   *Igor Ustinov*
+
+ * Enabled Server verification by default in `s_server` when option
+   verify_return_error is enabled.
+
+   *Ryan Hooper*
+
 OpenSSL 3.6
 -----------
 
 ### Changes between 3.5 and 3.6 [xx XXX xxxx]
 
- * The FIPS provider now performs a PCT on key import for RSA, EC and ECX.
-   This is mandated by FIPS 140-3 IG 10.3.A additional comment 1.
+ * Hardened the provider implementation of the RSA public key "encrypt"
+   operation to add a missing check that the caller-indicated output buffer
+   size is at least as large as the byte count of the RSA modulus.  The issue
+   was reported by Arash Ale Ebrahim from SYSPWN.
+
+   This operation is typically invoked via `EVP_PKEY_encrypt(3)`.  Callers that
+   in fact provide a sufficiently large buffer, but fail to correctly indicate
+   its size may now encounter unexpected errors.  In applications that attempt
+   RSA public encryption into a buffer that is too small, an out-of-bounds
+   write is now avoided and an error is reported instead.
+
+   *Viktor Dukhovni*
+
+ * Secure memory allocation calls are no longer used for HMAC keys.
 
    *Dr Paul Dale*
 
- * Introduce SSL_OP_SERVER_PREFERENCE superceding misleadingly
-   named SSL_OP_CIPHER_SERVER_PREFERENCE.
+ * `openssl req` no longer generates certificates with an empty extension list
+   when SKID/AKID are set to `none` during generation
+
+   *David Benjamin*
+
+ * The man page date is now derived from the release date provided
+   in `VERSION.dat` and not the current date for the released builds.
+
+   *Enji Cooper*
+
+ * Added support for `EVP_SKEY` opaque symmetric key objects to the key
+   derivation and key exchange provider methods. Added `EVP_KDF_CTX_set_SKEY()`,
+   `EVP_KDF_derive_SKEY()`, and `EVP_PKEY_derive_SKEY()` functions.
+
+   *Dmitry Belyavskiy and Simo Sorce*
+
+ * Added PCT for key import for SLH-DSA when in FIPS mode.
+
+   *Dr Paul Dale*
+
+ * Added FIPS 140-3 PCT on DH key generation.
+
+   *Nikola Pajkovsky*
+
+ * Added `i2d_PKCS8PrivateKey(3)` API to complement `i2d_PrivateKey(3)`,
+   the former always outputs PKCS#8.
+
+   *Viktor Dukhovni*
+
+ * Implemented interleaved AES-CBC+HMAC-SHA algorithm on aarch64.
+
+   *Fangming Fang*
+
+ * Added NIST security categories for PKEY objects.
+
+   *Dr Paul Dale*
+
+ * Added notification when all stream FINs are acknowledged in QUIC. Introduced
+   `ossl_quic_channel_notify_flush_done()` so that once final FINs are ACKed,
+   the channel transitions to terminating and `SSL_poll()` signals completion.
+   This allows applications to progress shutdown reliably.
+
+   *Alexandr Nedvedicky*
+
+ * Fixed the synthesised `OPENSSL_VERSION_NUMBER`.
+
+   *Richard Levitte*
+
+ * Added array memory allocation routines and converted suitable memory
+   allocation calls in the library to them.
+
+   *Eugene Syromiatnikov*
+
+ * Fixed behavior change of EC keygen by adding the generic error entry if the
+   provider did not itself add an error entry onto the queue. That way, there
+   always is an error on the error queue in case of a failure, but no behavior
+   change in case the provider emitted the error entry itself.
+
+   *Ingo Franzki*
+
+ * Documented all the environment variables used across the project in
+   `openssl-env(7)` and in specific man pages.
+
+   *Eugene Syromiatnikov*
+
+ * Added SHA-2 assembly implementation enhancing performance for LoongArch.
+   Added optimized SM3, MD5, SHA-256, SHA-512 implementation using Zbb extension
+   for RISC-V.
+
+   *Julian Zhu*
+
+ * Added options `CRYPTO_MEM_SEC` and `CRYPTO_MEM_SEC_MINSIZE` to openssl app to
+   initialize secure memory at the beginning of openssl app.
+
+   *Norbert Pocs*
+
+ * Resolved compiler warnings on Win64 builds.
+
+   *Tomas Mraz*
+
+ * Extended new `CRYPTO_THREAD_[get|set]_local` api to reduce our reliance
+   on OS thread-local variables.
+
+   *Neil Horman*
+
+ * Added make targets `build_inst_sw` and `build_inst_programs` which have the
+   functionality to split the build into two parts, e.g.: when tests should be
+   built with different compiler flags than installed software.
+
+   *Pavol Zacik*
+
+ * Refactored `OSSL_PARAM` name parsing so that automatically generated
+   parsers are used instead of `OSSL_PARAM_locate()` calls.  This should
+   also ensure that the list of acceptable parameters better matches
+   those which are actually processed.  It should also provide a small
+   performance improvement because repeated iteration over passed
+   parameter arrays is avoided.
+
+   *Dr Paul Dale*
+
+ * Introduce `SSL_OP_SERVER_PREFERENCE` superceding misleadingly
+   named `SSL_OP_CIPHER_SERVER_PREFERENCE`.
 
    *Michael Baentsch*
 
@@ -62,15 +194,15 @@ OpenSSL 3.6
 
    *Anthony Ioppolo*
 
- * Relax the path check in OpenSSL's 'file:' scheme implementation for
-   OSSL_STORE.  Previously, when the 'file:' scheme is an explicit part
+ * Relax the path check in OpenSSL's `file:` scheme implementation for
+   `OSSL_STORE`.  Previously, when the `file:` scheme is an explicit part
    of the URI, our implementation required an absolute path, such as
-   'file:/path/to/file.pem'.  This requirement is now relaxed, allowing
-   'file:path/to/file.pem', as well as 'file:file.pem'.
+   `file:/path/to/file.pem`.  This requirement is now relaxed, allowing
+   `file:path/to/file.pem`, as well as `file:file.pem`.
 
    *Richard Levitte*
 
- * Changed openssl-pkey(1) to match the documentation when private keys
+ * Changed `openssl-pkey(1)` to match the documentation when private keys
    are output in DER format (`-outform DER`) by producing the `PKCS#8` form by
    default.  Previously this would output the *traditional* form for those
    older key types (`DSA`, `RSA`, `ECDSA`) that had such a form.  The
@@ -84,16 +216,17 @@ OpenSSL 3.6
 
    *Dmitry Belyavskiy based on Clemens Lang's code*
 
- * Support setting a free function thunk to OPENSSL_sk stack types. Using a thunk
+ * Support setting a free function thunk to `OPENSSL_sk` stack types. Using a thunk
    allows the type specific free function to be called with the correct type
-   information from generic functions like OPENSSL_sk_pop_free().
+   information from generic functions like `OPENSSL_sk_pop_free()`.
 
    *Frederik Wedel-Heinen*
 
  * Enabled x86-64 SM4 optimizations with SM4 ISA Extension available starting
-   Lunar Lake and Arrow Lake S CPUs. The expected performance improvement is
-   ~3.6x for sm4-cbc, ~2.9x for sm4-gcm, ~9.2x for sm4-xts, ~5.3x for sm4-ccm
-   (on average, may vary depending on the data size) on Arrow Lake S.
+   Lunar Lake and Arrow Lake S CPUs. The expected performance improvement
+   is ~3.6x for `sm4-cbc`, ~2.9x for `sm4-gcm`, ~9.2x for `sm4-xts`,
+   ~5.3x for `sm4-ccm` (on average, may vary depending on the data size)
+   on Arrow Lake S.
 
    *Alina Elizarova*
 
@@ -111,7 +244,7 @@ OpenSSL 3.6
    *Adrian Stanciu*
 
  * Change default EC point formats configuration to support only 'uncompressed'
-   format, and add SSL_OP_LEGACY_EC_POINT_FORMATS flag and options to re-enable
+   format, and add `SSL_OP_LEGACY_EC_POINT_FORMATS` flag and options to re-enable
    previous default if required.
 
    *Tim Perry*
@@ -122,8 +255,8 @@ OpenSSL 3.6
 
    *Dimitri John Ledkov*
 
- * Add X509_CRL_get0_tbs_sigalg() accessor for the signature AlgorithmIdentifier
-   inside a CRL's TBSCertList.
+ * Add `X509_CRL_get0_tbs_sigalg()` accessor for the signature
+   `AlgorithmIdentifier` inside a CRL's `TBSCertList`.
 
    *Theo Buehler*
 
@@ -155,10 +288,22 @@ OpenSSL 3.6
 
    *Daniel Van Geest (CryptoNext Security)*
 
+ * Added support for FIPS 186-5 deterministic ECDSA signature
+   generation to the FIPS provider.
+
+   *Dimitri John Ledkov*
+
 OpenSSL 3.5
 -----------
 
-### Changes between 3.5.0 and 3.5.1 [xx XXX xxxx]
+### Changes between 3.5.1 and 3.5.2 [5 Aug 2025]
+
+ * The FIPS provider now performs a PCT on key import for RSA, EC and ECX.
+   This is mandated by FIPS 140-3 IG 10.3.A additional comment 1.
+
+   *Dr Paul Dale*
+
+### Changes between 3.5.0 and 3.5.1 [1 Jul 2025]
 
  * Fix x509 application adds trusted use instead of rejected use.
 

@@ -10,14 +10,7 @@
  */
 
 #include "cmp_local.h"
-#include "crypto/asn1.h"
-
-/* explicit #includes not strictly needed since implied by the above: */
-#include <openssl/asn1t.h>
-#include <openssl/cmp.h>
-#include <openssl/crmf.h>
-#include <openssl/err.h>
-#include <openssl/x509.h>
+#include "crypto/asn1.h" /* for ossl_X509_ALGOR_from_nid() */
 
 /*
  * This function is also used by the internal verify_PBMAC() in cmp_vfy.c.
@@ -123,7 +116,7 @@ ASN1_BIT_STRING *ossl_cmp_calc_protection(const OSSL_CMP_CTX *ctx,
         if (ASN1_item_sign_ex(ASN1_ITEM_rptr(OSSL_CMP_PROTECTEDPART),
                               msg->header->protectionAlg, /* sets X509_ALGOR */
                               NULL, prot, &prot_part, NULL, ctx->pkey, md,
-                              ctx->libctx, ctx->propq))
+                              ctx->libctx, ctx->propq) != 0)
             return prot;
         ASN1_BIT_STRING_free(prot);
         return NULL;
